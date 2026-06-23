@@ -15,7 +15,7 @@ namespace cinux::gui {
 inline constexpr uint16_t kEventMagic = 0x5253u; /* 'RS' -- endian/version sanity */
 inline constexpr uint16_t kAbiVersion = 1u;
 
-enum class EventType : uint8_t {
+enum class EventCode : uint8_t {
     kPointer = 1, /* mouse / touch: abs + delta + buttons */
     kKeycode = 2, /* keyboard: scancode + ascii + modifiers */
     kEncoder = 3, /* rotary encoder: axis diff */
@@ -33,7 +33,7 @@ inline constexpr uint8_t kEventFlagContinueRead = 1u << 1; /* more buffered; pol
 struct EventHeader {
     uint16_t  magic;       /* kEventMagic */
     uint16_t  version;     /* kAbiVersion */
-    EventType type;        /* discriminates the payload tail */
+    EventCode type;        /* discriminates the payload tail */
     uint8_t   flags;       /* kEventFlag* bitmask */
     uint16_t  payload_len; /* tail byte count */
 };

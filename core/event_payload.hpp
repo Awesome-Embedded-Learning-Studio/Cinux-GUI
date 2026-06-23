@@ -25,7 +25,7 @@ inline constexpr uint8_t kKeymodShift = 1u << 0;
 inline constexpr uint8_t kKeymodCtrl  = 1u << 1;
 inline constexpr uint8_t kKeymodAlt   = 1u << 2;
 
-/* POINTER payload: follows the header when type == EventType::kPointer.
+/* POINTER payload: follows the header when type == EventCode::kPointer.
  * 18 bytes (kind + 4*int32 + buttons). Packed -- the cross-process wire shape. */
 struct __attribute__((packed)) PointerPayload {
     uint8_t kind;    /* kPointerKind* */
@@ -36,7 +36,7 @@ struct __attribute__((packed)) PointerPayload {
     uint8_t buttons; /* bitmask: bit0=left, bit1=right, bit2=middle */
 };
 
-/* KEYCODE payload: follows the header when type == EventType::kKeycode.
+/* KEYCODE payload: follows the header when type == EventCode::kKeycode.
  * 3 bytes (ascii + scancode + modifiers). */
 struct __attribute__((packed)) KeycodePayload {
     char    ascii;     /* 0 if non-printable */
