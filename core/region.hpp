@@ -1,5 +1,5 @@
 /**
- * @file cgui/core/cgui_region.hpp
+ * @file core/region.hpp
  * @brief cgui L3 region algebra -- first-class Rect + bounded Region (F13 §4b)
  *
  * A region is the unit of "what changed" in the render engine. The §4c dirty
@@ -18,7 +18,7 @@
  *     drops a pixel that did. For dirty regions, over-coverage is a perf cost;
  *     under-coverage is a stale-pixel bug.
  *
- * Integer-only (CGUI_NO_FPU safe), no allocation (fixed storage).
+ * Integer-only (integer-only safe), no allocation (fixed storage).
  *
  * Compile condition: CINUX_GUI.
  *

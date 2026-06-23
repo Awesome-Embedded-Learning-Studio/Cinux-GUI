@@ -1,5 +1,5 @@
 /**
- * @file cgui/core/cgui_pump.cpp
+ * @file core/pump.cpp
  * @brief cgui core pump -- one host-neutral GUI iteration
  *
  * Host-neutral: this body has ZERO host includes. It drains raw input events
@@ -13,11 +13,11 @@
  * Compile condition: CINUX_GUI.
  */
 
-#include "cgui_pump.hpp"
+#include "pump.hpp"
 
 #include <stdint.h>
 
-#include "cgui_event.h"
+#include "event.hpp"
 
 namespace cinux::gui {
 namespace {
@@ -30,7 +30,7 @@ constexpr uint32_t kMaxDirtyRects = 64;
 
 }  // namespace
 
-void pump(cgui_host* host) {
+void pump(Host* host) {
     if (host == nullptr) {
         return;
     }
@@ -39,9 +39,9 @@ void pump(cgui_host* host) {
      *    deserialises + applies it to its own GUI state; any change surfaces as
      *    dirty rects from render_frame below. */
     if (host->core.poll_event != nullptr && host->core.dispatch_event != nullptr) {
-        alignas(uint32_t) uint8_t buf[sizeof(cgui_event_header) + kMaxPayload];
-        auto*                     hdr     = reinterpret_cast<cgui_event_header*>(buf);
-        const void*               payload = buf + sizeof(cgui_event_header);
+        alignas(uint32_t) uint8_t buf[sizeof(EventHeader) + kMaxPayload];
+        auto*                     hdr     = reinterpret_cast<EventHeader*>(buf);
+        const void*               payload = buf + sizeof(EventHeader);
         while (host->core.poll_event(host->ctx, hdr, sizeof(buf))) {
             host->core.dispatch_event(host->ctx, hdr, payload);
         }
@@ -53,8 +53,8 @@ void pump(cgui_host* host) {
     if (host->core.render_frame == nullptr || host->core.flush == nullptr) {
         return;
     }
-    cgui_rect  rects[kMaxDirtyRects];
-    cgui_frame frame{};
+    Rect  rects[kMaxDirtyRects];
+    Frame frame{};
     frame.rects     = rects;
     frame.max_rects = kMaxDirtyRects;
     host->core.render_frame(host->ctx, &frame);
@@ -66,7 +66,7 @@ void pump(cgui_host* host) {
     /* 3. Flush each dirty rect from the staging buffer to the display. The
      *    host's flush forwards (framebuffer / SPI / DMA) per its backend. */
     for (uint32_t i = 0; i < frame.count; i++) {
-        const cgui_rect& r = frame.rects[i];
+        const Rect& r = frame.rects[i];
         host->core.flush(host->ctx, r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0, frame.pixels,
                          frame.stride, frame.format);
     }

@@ -1,15 +1,15 @@
 /**
- * @file cgui/core/cgui_region.cpp
+ * @file core/region.cpp
  * @brief cgui region algebra implementation (F13 §4b)
  *
- * See cgui_region.hpp for the design rules (half-open rects, degenerate =
+ * See region.hpp for the design rules (half-open rects, degenerate =
  * empty, capacity collapse to bounding box = never under-cover). Integer-only,
  * fixed storage, no allocation.
  *
  * Compile condition: CINUX_GUI.
  */
 
-#include "cgui_region.hpp"
+#include "region.hpp"
 
 #include <stdint.h>
 

@@ -1,5 +1,5 @@
 /**
- * @file cgui/core/cgui_pump.hpp
+ * @file core/pump.hpp
  * @brief cgui core pump -- one host-neutral GUI iteration through the Host ABI
  *
  * pump() is the core-side partner of the host adapter: it has ZERO host
@@ -18,7 +18,7 @@
  */
 #pragma once
 
-#include "cgui_host.h"
+#include "host.hpp"
 
 #ifdef __cplusplus
 
@@ -31,7 +31,7 @@ namespace cinux::gui {
  *   1. Drain all input via host->core.poll_event(); hand each event to
  *      host->core.dispatch_event() (the host deserialises + applies it).
  *   2. host->core.render_frame(): the host composites into its staging buffer
- *      and reports the dirty rects + staging layout in a cgui_frame.
+ *      and reports the dirty rects + staging layout in a Frame.
  *   3. Flush each dirty rect via host->core.flush() (count==0 = idle, skip).
  *
  * Defensive discipline: a NULL host returns immediately, and every host
@@ -41,7 +41,7 @@ namespace cinux::gui {
  *
  * @param host  filled host descriptor (NULL -> no-op)
  */
-void pump(cgui_host* host);
+void pump(Host* host);
 
 }  // namespace cinux::gui
 

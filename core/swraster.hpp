@@ -1,10 +1,10 @@
 /**
- * @file cgui/core/cgui_swraseter.hpp
+ * @file core/swraster.hpp
  * @brief cgui L3 software rasteriser -- pure-CPU pixel primitives (§4a skeleton)
  *
  * The render engine cgui core uses to draw into a staging Surface before
  * flushing it to the host. Everything is integer-only (Q8.8 blend) so it runs
- * on a CGUI_NO_FPU profile (MCU-F1) unchanged; no floats leak.
+ * on a integer-only profile (MCU-F1) unchanged; no floats leak.
  *
  * §4a scope (see document/todo/f13-gui/cgui-02-refactor-and-separation.md §4):
  * this is the shape skeleton + unit tests. The primitives are generalised from
@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 
-#include "cgui_host.h"  // cgui_pixel_format
+#include "host.hpp"  // PixelFormat
 
 namespace cinux::gui {
 
@@ -54,7 +54,7 @@ struct Surface {
     uint32_t           width;
     uint32_t           height;
     uint32_t           stride_bytes;
-    cgui_pixel_format format;
+    PixelFormat format;
 };
 
 /**
@@ -78,7 +78,7 @@ void blit(Surface& dst, int32_t dx, int32_t dy, const Surface& src, uint32_t sx,
           uint32_t w, uint32_t h, const ClipRect* clip);
 
 /**
- * @brief Q8.8 alpha blend src -> dst (integer-only, CGUI_NO_FPU safe)
+ * @brief Q8.8 alpha blend src -> dst (integer-only, integer-only safe)
  *
  * @p alpha_q8 in [0,256]: 0 = dst unchanged, 256 = fully src, 128 = 50/50.
  * Per channel: dst = (src*a + dst*(256-a)) >> 8. XRGB8888 only (alpha byte
