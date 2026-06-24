@@ -53,23 +53,25 @@ void pump(Host* host) {
     if (host->core.render_frame == nullptr || host->core.flush == nullptr) {
         return;
     }
-    Rect  rects[kMaxDirtyRects];
+    /* HEAP-allocated dirty-rect array: Rect[kMaxDirtyRects] (64 rects ~= 1 KB)
+     * on the stack is wasteful in the (already deep) kernel GUI pump path --
+     * keep kernel stacks tight, like Linux's 8 KB. */
+    Rect* rects = new Rect[kMaxDirtyRects];
     Frame frame{};
     frame.rects     = rects;
     frame.max_rects = kMaxDirtyRects;
     host->core.render_frame(host->ctx, &frame);
 
-    if (frame.count == 0 || frame.pixels == nullptr) {
-        return; /* idle or nothing to present */
+    if (frame.count != 0 && frame.pixels != nullptr) {
+        /* 3. Flush each dirty rect from the staging buffer to the display. The
+         *    host's flush forwards (framebuffer / SPI / DMA) per its backend. */
+        for (uint32_t i = 0; i < frame.count; i++) {
+            const Rect& r = frame.rects[i];
+            host->core.flush(host->ctx, r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0, frame.pixels,
+                             frame.stride, frame.format);
+        }
     }
-
-    /* 3. Flush each dirty rect from the staging buffer to the display. The
-     *    host's flush forwards (framebuffer / SPI / DMA) per its backend. */
-    for (uint32_t i = 0; i < frame.count; i++) {
-        const Rect& r = frame.rects[i];
-        host->core.flush(host->ctx, r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0, frame.pixels,
-                         frame.stride, frame.format);
-    }
+    delete[] rects;
 }
 
 }  // namespace cinux::gui

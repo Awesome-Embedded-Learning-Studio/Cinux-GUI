@@ -86,9 +86,11 @@ void Region::subtract(const Rect& r) {
         return;
     }
     /* Fragment every member against r. The fragment count can grow up to 4x,
-     * so stage into a local buffer then collapse to bounds on overflow. */
-    Rect     staged[kMaxRects * 4];
-    uint32_t n = 0;
+     * so stage into a buffer then collapse to bounds on overflow.  The buffer
+     * is HEAP-allocated: Rect[kMaxRects*4] (128 rects ~= 2 KB) on the stack
+     * busts a tight kernel stack (the GUI composite path is already deep). */
+    Rect*    staged = new Rect[kMaxRects * 4];
+    uint32_t n      = 0;
     for (uint32_t i = 0; i < count_; i++) {
         n += rect_subtract(rects_[i], r, staged + n);
     }
@@ -97,15 +99,16 @@ void Region::subtract(const Rect& r) {
             rects_[i] = staged[i];
         }
         count_ = n;
-        return;
+    } else {
+        /* Overflow: collapse to bounding box of all fragments. */
+        Rect bbox = staged[0];
+        for (uint32_t i = 1; i < n; i++) {
+            bbox = rect_union(bbox, staged[i]);
+        }
+        count_           = 0;
+        rects_[count_++] = bbox;
     }
-    /* Overflow: collapse to bounding box of all fragments. */
-    Rect bbox = staged[0];
-    for (uint32_t i = 1; i < n; i++) {
-        bbox = rect_union(bbox, staged[i]);
-    }
-    count_           = 0;
-    rects_[count_++] = bbox;
+    delete[] staged;
 }
 
 Rect Region::bounds() const {
