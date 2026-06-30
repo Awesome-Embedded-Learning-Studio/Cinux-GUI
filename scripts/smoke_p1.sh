@@ -20,6 +20,7 @@ set -euo pipefail
 readonly ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly SMOKE_DIR="$ROOT/build/smoke"
 readonly RUN_DIR="$SMOKE_DIR/run"
+readonly SERIAL_SOCK="$RUN_DIR/serial.sock"
 readonly SERIAL_LOG="$RUN_DIR/serial.log"
 readonly MONITOR_SOCK="$RUN_DIR/monitor.sock"
 readonly QEMU_PIDFILE="$RUN_DIR/qemu.pid"
@@ -58,6 +59,7 @@ need wget wget
 need sha256sum coreutils
 need socat socat
 need bsdtar libarchive-tools
+need python3 python3
 
 log "preflight: host-side fbdev-host build (smoke sanity)"
 (cd "$ROOT" && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1 \
@@ -102,7 +104,7 @@ QEMU_ARGS=(
   -netdev user,id=net0 -device virtio-net-pci,netdev=net0
   -virtfs "local,path=$ROOT,mount_tag=$SRC_TAG,security_model=none,readonly=on"
   -display "vnc=$VNC_DISP"
-  -serial "file:$SERIAL_LOG"
+  -serial "unix:$SERIAL_SOCK,server,nowait"
   -monitor "unix:$MONITOR_SOCK,server,nowait"
   -pidfile "$QEMU_PIDFILE"
   -daemonize
@@ -121,27 +123,22 @@ fi
 "$QEMU_BIN" "${QEMU_ARGS[@]}" || die "qemu launch failed"
 log "qemu: pid=$(cat "$QEMU_PIDFILE") vnc=$VNC_DISP (TCP 5900) serial=$SERIAL_LOG"
 
-# ── 5. hand off to the human (VNC) ───────────────────────────────────────────
+# ── 5. drive the guest FROM THIS CONSOLE (serial socket + drive.py) ──────────
+# No VNC clicking needed: drive.py logs in over serial, mounts the 9p source
+# share, runs the guest smoke script, and streams everything (boot + apk + build
+# + fbdev-host) back to this console. VNC is OPTIONAL -- only for eyeballing the
+# framebuffer + wiggling the mouse; pass/fail does not depend on it.
 cat >&2 <<EOF
 
-[smoke] ──────────────────────────────────────────────────────────────────
-[smoke]  1) open a VNC viewer to $VNC_DISP  (WSL2/Windows: vncviewer localhost:5999)
-[smoke]  2) Alpine boots to a root shell (login "root", no password, if asked)
-[smoke]  3) run the guest smoke script:
-[smoke]         sh /mnt/src/scripts/guest_smoke_p1.sh
-[smoke]  4) watch the screen: fbdev-host paints the window + cursor scene.
-[smoke]     move/drag the mouse over VNC -> the cursor follows.
-[smoke]  The guest times out after 40s; this harness then evaluates + reports.
-[smoke] ──────────────────────────────────────────────────────────────────
+[smoke] Optional: a VNC viewer to $VNC_DISP (localhost:5999) shows the live
+[smoke] framebuffer + takes mouse input while fbdev-host runs. Not required.
+[smoke] Streaming the guest console to this host console now...
 
 EOF
 
-# ── 6. wait for the guest run to finish (GUEST_RUN_DONE on serial) ───────────
-log "wait: GUEST_RUN_DONE on serial (up to 600s for apk install + build + 40s run)"
-for _ in $(seq 1 600); do
-  grep -q 'GUEST_RUN_DONE' "$SERIAL_LOG" 2>/dev/null && break
-  sleep 1
-done
+log "drive: boot + login + mount 9p + run guest script (serial -> this console)"
+python3 "$ROOT/scripts/smoke_p1_drive.py" "$SERIAL_SOCK" "$SERIAL_LOG" \
+  || log "drive.py returned non-zero (timeout / guest error) -- evaluating gates anyway"
 
 # ── 7. screenshot mid-run (diagnostic only -- NOT gating) ────────────────────
 if grep -q 'GUEST_RUN_START' "$SERIAL_LOG" 2>/dev/null && [[ -S "$MONITOR_SOCK" ]]; then
