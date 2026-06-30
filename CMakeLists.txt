@@ -63,4 +63,10 @@ if(CINUX_GUI_STANDALONE)
     add_executable(offscreen-dump host/offscreen_host_main.cpp host/ppm_writer.cpp)
     target_link_libraries(offscreen-dump PRIVATE cinux-gui)
     add_test(NAME offscreen-dump COMMAND offscreen-dump)
+
+    # Replay host: scripted pointer events drive a draggable scene, asserts
+    # end-state geometry + dirty-region discipline (P0-b3).
+    add_executable(replay-dump host/replay_host_main.cpp host/ppm_writer.cpp)
+    target_link_libraries(replay-dump PRIVATE cinux-gui)
+    add_test(NAME replay-dump COMMAND replay-dump)
 endif()
