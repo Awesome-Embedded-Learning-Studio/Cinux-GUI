@@ -57,4 +57,10 @@ if(CINUX_GUI_STANDALONE)
     add_executable(cinux-gui-smoke host/fake_host_main.cpp)
     target_link_libraries(cinux-gui-smoke PRIVATE cinux-gui)
     add_test(NAME cinux-gui-smoke COMMAND cinux-gui-smoke)
+
+    # Offscreen host: paints a static scene + dumps one PPM frame (P0-b2). The
+    # first "you can see it" probe of the render pipeline.
+    add_executable(offscreen-dump host/offscreen_host_main.cpp host/ppm_writer.cpp)
+    target_link_libraries(offscreen-dump PRIVATE cinux-gui)
+    add_test(NAME offscreen-dump COMMAND offscreen-dump)
 endif()

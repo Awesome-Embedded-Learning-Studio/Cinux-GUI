@@ -57,8 +57,8 @@
 |---|---|---|---|---|
 | **P0-a** | staging Surface 契约 + swraster 接进 pump（`render_frame` 改画 staging + region 算脏） | ✅ | `9e71e3f` | ctest 绿 + ASAN 干净 |
 | **P0-b1** | 字体基建：PSF2 字体搬进本仓（constexpr C 数组）+ 解析器 + glyph_blit 渲字单测 | 🔜 NEXT | — | ctest 绿（parse 8×16/256 + 'A' 非空） |
-| **P0-b2** | offscreen host + PPM dump + 静态场景（窗口边框 + 光标 + "Hello"）一帧 | 待启动 | — | 人眼看到图 + PPM 落盘 |
-| **P0-b3** | 事件回放（文本→Event）+ 拖拽交互 + 多帧 dump + 金帧/脏区断言 | 待启动 | — | 光标能动 + 金帧对比过 |
+| **P0-b2** | offscreen host + PPM dump + 静态场景（窗口 + 标题栏 + 多行文字 + 光标）一帧 | ✅ | _(待提交)_ | ctest 绿 + ASAN + 视觉确认 |
+| **P0-b3** | 事件回放（文本→Event）+ 拖拽交互 + 多帧 dump + 金帧/脏区断言 | 🔜 NEXT | — | 光标能动 + 金帧对比过 |
 | **P0-c** | 金帧 / 脏区断言进 ctest + host 单测 ASAN 自验 | 待启动 | — | ctest 绿 + ASAN 干净 |
 
 ## 验证哲学
