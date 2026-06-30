@@ -19,9 +19,11 @@
 #include <cstdint>
 #include <cstdio>
 
+#include "font.hpp"      // PsfFont
 #include "gui_core.hpp"  // GuiCore
 #include "host.hpp"      // Host, HostCore, Frame, PixelFormat
 #include "region.hpp"    // Rect, Region, rect_intersect
+#include "swraster.hpp"  // Surface, fill_rect, glyph_blit
 
 namespace {
 
@@ -181,8 +183,44 @@ int run() {
         CHECK(reg.count() == 2, "region count %u (expected 2)", reg.count());
     }
 
+    // 7. PSF2 font: parse -> 8x16/256 glyphs; 'A' renders foreground pixels,
+    //    ' ' (space) renders none -- proves parse + glyph index + glyph_blit link.
+    {
+        PsfFont font;
+        font.init();
+        CHECK(font.ready(), "font not ready (PSF2 parse failed)");
+        CHECK(font.width() == 8, "font width %u (expected 8)", font.width());
+        CHECK(font.height() == 16, "font height %u (expected 16)", font.height());
+        CHECK(font.num_glyphs() == 256, "font num_glyphs %u (expected 256)", font.num_glyphs());
+
+        constexpr uint32_t kFw = 8, kFh = 16;
+        uint32_t          fbuf[kFw * kFh];
+        Surface           fs{static_cast<void*>(fbuf), kFw, kFh, kFw * 4u, PixelFormat::kXrgb8888};
+        constexpr uint32_t kFg = 0x00FFFFFFu;
+
+        fill_rect(fs, 0, 0, kFw, kFh, 0x00000000u, nullptr);
+        glyph_blit(fs, 0, 0, font.glyph('A'), font.width(), font.height(), kFg, nullptr);
+        uint32_t on_a = 0;
+        for (uint32_t i = 0; i < kFw * kFh; i++) {
+            if (fbuf[i] == kFg) {
+                on_a++;
+            }
+        }
+        CHECK(on_a > 0, "'A' rendered %u fg pixels (expected >0)", on_a);
+
+        fill_rect(fs, 0, 0, kFw, kFh, 0x00000000u, nullptr);
+        glyph_blit(fs, 0, 0, font.glyph(' '), font.width(), font.height(), kFg, nullptr);
+        uint32_t on_sp = 0;
+        for (uint32_t i = 0; i < kFw * kFh; i++) {
+            if (fbuf[i] == kFg) {
+                on_sp++;
+            }
+        }
+        CHECK(on_sp == 0, "' ' rendered %u fg pixels (expected 0)", on_sp);
+    }
+
     std::printf("cinux-gui-smoke: OK (null-host safe + idle skip + dirty flush + "
-                "staging ownership + region-on-path + region algebra)\n");
+                "staging ownership + region-on-path + region algebra + psf2 font)\n");
     return 0;
 }
 
