@@ -98,10 +98,15 @@ def main():
     # the version= option, so whatever tag QEMU really used we still mount.
     send("mkdir -p /mnt/src")
     time.sleep(1)
-    send('modprobe 9pnet_virtio 2>/dev/null; modprobe 9p 2>/dev/null; '
-         'echo "=== dmesg 9p/vin ==="; dmesg | grep -iE "9p|vin" | tail -15; '
-         'echo DIAG_DONE')
-    time.sleep(3)
+    send('modprobe 9pnet_virtio 2>/dev/null; modprobe 9p 2>/dev/null; sleep 2; '
+         'echo "=== virtio drivers ==="; '
+         'for d in /sys/bus/virtio/devices/virtio*; do '
+         'drv=$(readlink $d/driver 2>/dev/null); '
+         'echo "$(basename $d) driver=$(basename ${drv:-none}) mod=$(cat $d/modalias)"; '
+         'done; '
+         'echo "=== dmesg 9p/virtio_9p ==="; '
+         'dmesg | grep -iE "9p|vin|virtio_9p" | tail -20; echo DIAG_DONE')
+    time.sleep(4)
     send('for t in host0 srcdev; do '
          'for o in "trans=virtio,version=9p2000.L" "trans=virtio"; do '
          'mount -t 9p -o "$o" "$t" /mnt/src 2>/dev/null '

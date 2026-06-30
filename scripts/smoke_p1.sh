@@ -102,7 +102,7 @@ QEMU_ARGS=(
   -device qemu-xhci,id=xhci
   -device usb-tablet
   -netdev user,id=net0 -device virtio-net-pci,netdev=net0
-  -fsdev "local,id=srcdev,path=$ROOT,security_model=none,readonly=on"
+  -fsdev "local,id=srcdev,path=$ROOT,security_model=none"
   -device "virtio-9p-pci,fsdev=srcdev,mount_tag=$SRC_TAG"
   -display "vnc=$VNC_DISP"
   -serial "unix:$SERIAL_SOCK,server,nowait"
