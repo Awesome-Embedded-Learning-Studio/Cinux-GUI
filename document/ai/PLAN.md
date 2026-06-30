@@ -1,6 +1,8 @@
 # Cinux-GUI PLAN — 当前焦点批级进度
 
-> 批级（最易变）。**里程碑全树见 [ROADMAP.md](ROADMAP.md)。** 当前焦点：**P0 = Probe-0**（🔜）。
+> 批级（最易变）。**里程碑全树见 [ROADMAP.md](ROADMAP.md)。**
+> **P0 Probe-0 完成 ✅**：核心渲染管线 standalone 跑通——pump→core.staging→swraster→glyph_blit→flush，事件回放驱动拖拽，脏区纪律断言（idle 0 / 首帧全屏 / 后续局部）。3 个 ctest（smoke + offscreen + replay）全绿 + ASAN 干净。
+> **下一焦点**：P1 Probe-1（QEMU 真 fbdev 手动冒烟，非 CI）或 P2（渲染收敛）。
 
 ## 现状速览（我们站在哪）
 
@@ -16,7 +18,7 @@
 ### 关键的「没有」（本仓）
 
 - 没有控件 / WM / 合成器 / SDL/X11/Wayland 真 host（README 全 TODO）。
-- **swraster 没接进 pump**：pump 把渲染甩给 host 的 `render_frame` → 在 CinuxOS 里回到 `wm.composite()` → legacy `Canvas::draw_*`。**绘制能力悬着没上线**（`swraster.hpp` 自承 "NOT wired into pump yet"）。
+- ~~**swraster 没接进 pump**~~ → **P0-a 已接进渲染路径**：core 拥有 staging Surface（新增 `GuiCore`），pump 预填 staging → host 经 `render_frame` 画进去 + 报脏区 → region 收脏 → flush。但 **host 还没画真场景**（窗口/光标/文字 = P0-b 的 offscreen host），目前 fake_host 只验证所有权链路。
 
 ### CinuxOS 侧（不在本仓，但要知道）
 
@@ -55,9 +57,11 @@
 
 | 批 | 范围 | 状态 | commit | 测试 |
 |---|---|---|---|---|
-| **P0-a** | staging Surface 契约 + swraster 接进 pump（`render_frame` 改画 staging + region 算脏） | 🔜 NEXT | — | standalone ctest |
-| **P0-b** | offscreen host（影子缓冲 + PNG dump + 事件回放）+ 极简场景（窗口 + 光标 + 文字） | 待启动 | — | 金帧对比 + 脏区断言 |
-| **P0-c** | 金帧 / 脏区断言进 ctest + host 单测 ASAN 自验 | 待启动 | — | ctest 绿 + ASAN 干净 |
+| **P0-a** | staging Surface 契约 + swraster 接进 pump（`render_frame` 改画 staging + region 算脏） | ✅ | `9e71e3f` | ctest 绿 + ASAN 干净 |
+| **P0-b1** | 字体基建：PSF2 字体搬进本仓（constexpr C 数组）+ 解析器 + glyph_blit 渲字单测 | 🔜 NEXT | — | ctest 绿（parse 8×16/256 + 'A' 非空） |
+| **P0-b2** | offscreen host + PPM dump + 静态场景（窗口 + 标题栏 + 多行文字 + 光标）一帧 | ✅ | `f08abbf` | ctest 绿 + ASAN + 视觉确认 |
+| **P0-b3** | 事件回放（文本→Event）+ 拖拽交互 + 多帧 dump + 金帧/脏区断言 | ✅ | `f4c95ca` | ctest 绿 + ASAN + 几何/脏区断言 |
+| **P0-c** | 金帧 / 脏区断言进 ctest + host 单测 ASAN 自验 | ✅ 被吸收 | — | 脏区断言进 ctest（b3）+ 金帧用结构断言代替二进制 fixture（更鲁棒）+ 每批 ASAN |
 
 ## 验证哲学
 

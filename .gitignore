@@ -2,5 +2,6 @@
 /build-*/
 *.o
 *.a
+*.ppm
 compile_commands.json
 .cache/

@@ -25,15 +25,25 @@ enum class PixelFormat : uint32_t {
     kArgb8888 = 2, /* 32bpp, premultiplied alpha */
 };
 
-/* One frame's host->core transfer. The CORE (pump) owns the rects buffer and
- * the flush loop; the HOST owns input dispatch + rendering and fills this in
- * render_frame(). count == 0 means nothing changed -- the core flushes nothing
- * (idle skip). */
+/* Bytes per pixel for a CPU-rasterisable format. 0 means the format has no
+ * software raster path today (the staging session is unusable; pump() no-ops
+ * rather than trap). */
+inline constexpr uint32_t bytes_per_pixel(PixelFormat fmt) {
+    return (fmt == PixelFormat::kXrgb8888 || fmt == PixelFormat::kArgb8888) ? 4u : 0u;
+}
+
+/* One frame's core<->host contract. The CORE (GuiCore) owns BOTH the staging
+ * buffer and the rects buffer: pump() pre-fills pixels/stride/width/height/
+ * format from the core-owned staging Surface, then calls render_frame(). The
+ * HOST paints the scene into that staging buffer and reports the dirty rects
+ * (rects/count). count == 0 means nothing changed -- the core flushes nothing
+ * (idle skip). This is the DIRECTIVES A "flush display model": the core owns the
+ * staging, the host only ever receives a dirty frame. */
 struct Frame {
     Rect*       rects;
     uint32_t    max_rects;
     uint32_t    count;
-    const void* pixels;
+    void*       pixels; /* core-owned staging base; the host paints HERE */
     uint32_t    stride;
     uint32_t    width;
     uint32_t    height;
@@ -46,9 +56,10 @@ struct Frame {
 struct HostCore {
     /* L1 Display backend (flush model). The core owns the staging buffer and
      * pushes each dirty rect to the backend. @p pixels is the BASE of the
-     * staging buffer (not the rect's top-left); x/y/w/h locate the dirty rect
-     * in display coords; @p stride is the staging row pitch in bytes. A host
-     * MUST provide flush -- NULL means rendered frames never reach the display. */
+     * core-owned staging buffer (not the rect's top-left); x/y/w/h locate the
+     * dirty rect in display coords; @p stride is the staging row pitch in bytes.
+     * A host MUST provide flush -- NULL means rendered frames never reach the
+     * display. */
     void (*flush)(void* ctx, int x, int y, int w, int h, const void* pixels, uint32_t stride,
                   PixelFormat fmt);
     void (*flush_complete)(void* ctx); /* host -> core: last async flush done */
@@ -58,9 +69,10 @@ struct HostCore {
     bool (*poll_event)(void* ctx, EventHeader* out, uint16_t out_cap);
 
     /* L4 Frame work. dispatch_event applies one drained event to host GUI state;
-     * render_frame does per-frame work + reports dirty rects + staging buffer.
-     * The core never sees the host's GUI types -- this is what keeps it
-     * host-neutral. NULL = host has no input path / renders nothing. */
+     * render_frame paints one frame into the CORE-owned staging buffer (already
+     * filled in Frame by pump) and reports the dirty rects (rects/count). The
+     * core never sees the host's GUI types -- this is what keeps it host-neutral.
+     * NULL = host has no input path / renders nothing. */
     void (*dispatch_event)(void* ctx, const EventHeader* ev, const void* payload);
     void (*render_frame)(void* ctx, Frame* frame);
 
