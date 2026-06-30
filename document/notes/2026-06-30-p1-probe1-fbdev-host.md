@@ -54,7 +54,20 @@ P0 的 offscreen/replay host 是「假 host」（无真屏/真鼠标，事件 sc
 - **fbdev-host 编译通过**（32KB 二进制；WSL2 无 /dev/fb0 不能本机跑）。
 - **真 QEMU 冒烟待手动**（见 runbook）。
 
-## QEMU 冒烟 runbook（手动）
+## QEMU 冒烟（scripts/smoke_p1.sh 半自动）
+
+本仓 `scripts/smoke_p1.sh` + `scripts/guest_smoke_p1.sh` 自动化了 P1 冒烟（Workflow 调研 Alpine 镜像 / QEMU flags / 静态部署 / evdev 发现后综合设计）：
+
+- **host（`smoke_p1.sh`）**：缓存 Alpine virt 3.21.3 ISO（sha256 pin）+ 起 QEMU（`-vga std` vesafb→`/dev/fb0` + `qemu-xhci + usb-tablet` EV_ABS + `vnc=127.0.0.1:99` + readonly 9p 源码共享 + `-serial file` capture + `-monitor unix` screendump）+ poll serial + 自动 gates（boot/device/run/no-crash）。
+- **guest（VNC 里跑 `guest_smoke_p1.sh`）**：mount 9p + `apk add cmake g++` + 原生编译（musl，零 libc 兼容坑）+ 从 `/proc/bus/input/devices` 发现 tablet `eventN` + `timeout 40 ./fbdev-host /dev/fb0 /dev/input/eventN`。
+- **半自动**：host 准备 + gate；VNC 手动跑 guest 脚本（人眼看屏 + 鼠标交互）。全自动 apkovl autoexec 标 TODO（避免 expect/双向 serial 复杂度）。
+- **VNC :99（TCP 5999）** 远离 CinuxOS 默认 `-vnc :0`（5900），不冲突。
+
+跑：`./scripts/smoke_p1.sh`，按提示 VNC 连 `localhost:5999`，Alpine shell 里 `sh /mnt/src/scripts/guest_smoke_p1.sh`。
+
+`fbdev-host` 接受设备路径 argv（`argv[1]=fb`，`argv[2]=event`，默认不变）——脚本把发现的 `eventN` 传进去。
+
+### 手动 runbook（fallback / 理解各步）
 
 ### 1. 准备一个带 fbdev 的 Linux 镜像
 任一带 vesafb 的轻量 Linux QCOW2（Alpine 或 Debian cloud）。fbdev 要出现 `/dev/fb0`（`-vga std` → vesafb）。

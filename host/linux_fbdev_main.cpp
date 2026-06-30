@@ -212,7 +212,7 @@ Host make_host(HostState& st) {
 
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
     PsfFont font;
     font.init();
     if (!font.ready()) {
@@ -221,13 +221,14 @@ int main() {
     }
 
     FbdevDevice fb;
-    if (!fb.open("/dev/fb0")) {
-        std::printf("fbdev-host: cannot open /dev/fb0\n");
+    const char*  fb_path = (argc > 1) ? argv[1] : "/dev/fb0";
+    if (!fb.open(fb_path)) {
+        std::printf("fbdev-host: cannot open %s\n", fb_path);
         return 1;
     }
     std::printf("fbdev-host: fb %ux%u stride %u\n", fb.width(), fb.height(), fb.stride_bytes());
 
-    const char*   evdev_path = "/dev/input/event0";
+    const char* evdev_path = (argc > 2) ? argv[2] : "/dev/input/event0";
     const int32_t cx0 = static_cast<int32_t>(fb.width()) / 2;
     const int32_t cy0 = static_cast<int32_t>(fb.height()) / 2;
     EvdevDevice ev;
