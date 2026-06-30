@@ -91,25 +91,27 @@ def main():
         sys.stderr.write("[drive] no login prompt and no shell -- boot may have stalled\n")
         wait_for(r"#", STEP_TIMEOUT, "shell")
 
-    # 2. mount the 9p source share + verify the guest script is visible
+    # 2. mount the 9p source share. The 9p device (id 0x0009) is attached, the
+    # filesystem is registered, and modules are loaded -- so an ENOENT on mount
+    # is a tag mismatch. Dump what tag the kernel actually registered (dmesg),
+    # then try host0 (what QEMU should set) + a couple of fallbacks, with/without
+    # the version= option, so whatever tag QEMU really used we still mount.
     send("mkdir -p /mnt/src")
     time.sleep(1)
-    # diagnostics: list each virtio device's modalias (9p device id = 0x0009),
-    # whether 9p is registered as a filesystem, and whether the modules loaded.
     send('modprobe 9pnet_virtio 2>/dev/null; modprobe 9p 2>/dev/null; '
-         'for d in /sys/bus/virtio/devices/virtio*; do '
-         'echo "VDEV $(cat $d/modalias 2>/dev/null)"; done; '
-         'echo "9PFS $(grep 9p /proc/filesystems || echo none)"; '
-         'lsmod | grep 9p || echo "9PMOD none"; echo DIAG_DONE')
+         'echo "=== dmesg 9p/vin ==="; dmesg | grep -iE "9p|vin" | tail -15; '
+         'echo DIAG_DONE')
     time.sleep(3)
-    send("mount -t 9p -o trans=virtio,version=9p2000.L,ro host0 /mnt/src")
+    send('for t in host0 srcdev; do '
+         'for o in "trans=virtio,version=9p2000.L" "trans=virtio"; do '
+         'mount -t 9p -o "$o" "$t" /mnt/src 2>/dev/null '
+         '&& echo "MOUNTED_AS=$t OPT=$o" && break 2; '
+         'done; done; echo MTRY_DONE')
     time.sleep(3)
     send("ls /mnt/src/scripts/guest_smoke_p1.sh && echo MOUNT_OK || echo MOUNT_FAIL")
     time.sleep(2)
     if not seen(r"MOUNT_OK"):
-        sys.stderr.write("[drive] 9p mount did not land -- dumping dmesg 9p/virtio\n")
-        send("dmesg | grep -iE '9p|virtio' | tail -30")
-        time.sleep(2)
+        sys.stderr.write("[drive] 9p mount did not land -- see dmesg + MOUNTED_AS above\n")
 
     # 3. run the guest smoke script (apk + cmake build + discover event + run)
     send("sh /mnt/src/scripts/guest_smoke_p1.sh")

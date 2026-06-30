@@ -14,9 +14,12 @@ set -u
 exec >/dev/ttyS0 2>&1
 echo "GUEST_SCRIPT_START"
 
-# (a) mount the host source tree via the read-only 9p share (tag host0)
+# (a) mount the host source tree via the read-only 9p share (tag host0).
+#     drive.py may already have mounted it (under whichever tag QEMU actually
+#     registered); if so, skip, else try host0.
 mkdir -p /mnt/src
-mount -t 9p -o trans=virtio,version=9p2000.L,ro host0 /mnt/src \
+mountpoint -q /mnt/src || \
+  mount -t 9p -o trans=virtio,version=9p2000.L,ro host0 /mnt/src \
   || { echo "GUEST_FAIL: 9p mount host0"; exit 1; }
 
 # (b) toolchain (Alpine main+community ship cmake/g++)
