@@ -16,7 +16,7 @@
 ### 关键的「没有」（本仓）
 
 - 没有控件 / WM / 合成器 / SDL/X11/Wayland 真 host（README 全 TODO）。
-- **swraster 没接进 pump**：pump 把渲染甩给 host 的 `render_frame` → 在 CinuxOS 里回到 `wm.composite()` → legacy `Canvas::draw_*`。**绘制能力悬着没上线**（`swraster.hpp` 自承 "NOT wired into pump yet"）。
+- ~~**swraster 没接进 pump**~~ → **P0-a 已接进渲染路径**：core 拥有 staging Surface（新增 `GuiCore`），pump 预填 staging → host 经 `render_frame` 画进去 + 报脏区 → region 收脏 → flush。但 **host 还没画真场景**（窗口/光标/文字 = P0-b 的 offscreen host），目前 fake_host 只验证所有权链路。
 
 ### CinuxOS 侧（不在本仓，但要知道）
 
@@ -55,8 +55,8 @@
 
 | 批 | 范围 | 状态 | commit | 测试 |
 |---|---|---|---|---|
-| **P0-a** | staging Surface 契约 + swraster 接进 pump（`render_frame` 改画 staging + region 算脏） | 🔜 NEXT | — | standalone ctest |
-| **P0-b** | offscreen host（影子缓冲 + PNG dump + 事件回放）+ 极简场景（窗口 + 光标 + 文字） | 待启动 | — | 金帧对比 + 脏区断言 |
+| **P0-a** | staging Surface 契约 + swraster 接进 pump（`render_frame` 改画 staging + region 算脏） | ✅ | _(待提交)_ | ctest 绿 + ASAN 干净 |
+| **P0-b** | offscreen host（影子缓冲 + PNG dump + 事件回放）+ 极简场景（窗口 + 光标 + 文字） | 🔜 NEXT | — | 金帧对比 + 脏区断言 |
 | **P0-c** | 金帧 / 脏区断言进 ctest + host 单测 ASAN 自验 | 待启动 | — | ctest 绿 + ASAN 干净 |
 
 ## 验证哲学

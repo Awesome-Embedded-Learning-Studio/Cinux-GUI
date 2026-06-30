@@ -35,7 +35,7 @@ endif()
 # host-neutral core library (built in BOTH contexts)
 # ============================================================
 add_library(cinux-gui STATIC
-    core/pump.cpp
+    core/gui_core.cpp
     core/region.cpp
     core/swraster.cpp
     core/abi_check.cpp
