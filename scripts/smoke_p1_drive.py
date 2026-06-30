@@ -90,7 +90,18 @@ def main():
     else:
         wait_for(r"#", STEP_TIMEOUT, "shell")
 
-    # 2. fetch the guest script over HTTP (QEMU user net: 10.0.2.2 = host)
+    # 2. network sanity: is SLIRP guest->host (10.0.2.2) actually up?
+    send("ip -4 addr show 2>/dev/null | grep 'inet '; echo IP_DONE")
+    wait_for(r"IP_DONE", 15, "ip addr")
+    send("ping -c2 -W2 10.0.2.2 2>&1 | tail -4; echo PING_DONE")
+    if not wait_for(r"PING_DONE", 25, "ping 10.0.2.2"):
+        sys.stderr.write("[drive] ping 10.0.2.2 timed out -- SLIRP guest->host looks broken\n")
+    elif not seen(r"0% packet loss|2 packets received|1 packets received"):
+        sys.stderr.write("[drive] ping 10.0.2.2 LOST packets -- SLIRP unreliable; HTTP will likely fail\n")
+    else:
+        sys.stderr.write("[drive] ping 10.0.2.2 OK -- SLIRP up; HTTP issue is server/bind side\n")
+
+    # 3. fetch the guest script over HTTP (QEMU user net: 10.0.2.2 = host)
     send(f"wget -T 15 -O /tmp/g.sh http://10.0.2.2:{HTTP_PORT}/scripts/guest_smoke_p1.sh 2>&1 | tail -3; echo GS=$?")
     if not wait_for(r"GS=0", STEP_TIMEOUT, "fetch guest script (GS=0)"):
         sys.stderr.write(f"[drive] guest script fetch failed -- host http.server on :{HTTP_PORT}? "
