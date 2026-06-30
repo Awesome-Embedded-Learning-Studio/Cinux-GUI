@@ -94,6 +94,10 @@ def main():
     # 2. mount the 9p source share + verify the guest script is visible
     send("mkdir -p /mnt/src")
     time.sleep(1)
+    # make sure the 9p modules are loaded (diskless Alpine may defer them)
+    send("modprobe 9pnet_virtio 2>/dev/null; modprobe 9p 2>/dev/null; "
+         "ls /sys/bus/virtio/devices/ ; echo MODPROBE_DONE")
+    time.sleep(2)
     send("mount -t 9p -o trans=virtio,version=9p2000.L,ro host0 /mnt/src")
     time.sleep(3)
     send("ls /mnt/src/scripts/guest_smoke_p1.sh && echo MOUNT_OK || echo MOUNT_FAIL")
