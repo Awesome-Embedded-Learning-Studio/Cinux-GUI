@@ -91,7 +91,7 @@ def main():
         wait_for(r"#", STEP_TIMEOUT, "shell")
 
     # 2. fetch the guest script over HTTP (QEMU user net: 10.0.2.2 = host)
-    send(f"wget -O /tmp/g.sh http://10.0.2.2:{HTTP_PORT}/scripts/guest_smoke_p1.sh 2>&1 | tail -2; echo GS=$?")
+    send(f"wget -T 15 -O /tmp/g.sh http://10.0.2.2:{HTTP_PORT}/scripts/guest_smoke_p1.sh 2>&1 | tail -3; echo GS=$?")
     if not wait_for(r"GS=0", STEP_TIMEOUT, "fetch guest script (GS=0)"):
         sys.stderr.write(f"[drive] guest script fetch failed -- host http.server on :{HTTP_PORT}? "
                          f"QEMU -netdev user present?\n")

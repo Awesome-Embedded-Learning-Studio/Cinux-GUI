@@ -98,8 +98,17 @@ tar czf "$SMOKE_DIR/src.tar.gz" -C "$ROOT" \
   core host test scripts CMakeLists.txt 2>/dev/null || die "tar failed"
 
 log "prep: host http.server on :$HTTP_PORT (serving $ROOT; guest -> 10.0.2.2:$HTTP_PORT)"
-python3 -m http.server "$HTTP_PORT" --directory "$ROOT" >/dev/null 2>&1 &
+python3 -m http.server "$HTTP_PORT" --bind 0.0.0.0 --directory "$ROOT" >/dev/null 2>&1 &
 HTTP_PID=$!
+sleep 1
+if ! python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:$HTTP_PORT/').read()" >/dev/null 2>&1; then
+  if kill -0 "$HTTP_PID" 2>/dev/null; then
+    die "http.server PID $HTTP_PID alive but not serving on :$HTTP_PORT"
+  else
+    die "http.server died (is 'python3 -m http.server --directory' supported? port :$HTTP_PORT free?)"
+  fi
+fi
+log "prep: http.server reachable on 127.0.0.1:$HTTP_PORT"
 
 # ── 5. launch QEMU (daemonized; HTTP is the source transport -- no 9p) ──────
 QEMU_ARGS=(
