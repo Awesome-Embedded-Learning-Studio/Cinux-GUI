@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """smoke_p1_drive.py -- drive the Alpine guest over QEMU's serial unix socket.
 
-Connects to the serial socket, tees everything the guest prints to THIS host
-console (and the serial log), waits for boot, logs in, mounts the 9p source
-share, and runs the guest smoke script. This replaces manual VNC driving -- the
-operator sees the whole boot + apk + build + run streaming on the host console.
-VNC remains OPTIONAL, only for eyeballing the framebuffer + wiggling the mouse.
+Streams the guest console to the host, logs in, fetches the guest smoke script
+over HTTP (host python http.server via QEMU user-net 10.0.2.2), and runs it.
+The guest script does apk + wget source tarball + native cmake build + run
+fbdev-host. 9p proved unreliable (driver bound but tag never matched); HTTP is
+the source transport. VNC is OPTIONAL (framebuffer eyeballing + mouse only).
 
-Usage: python3 scripts/smoke_p1_drive.py <serial_sock> <serial_log>
-Exit:   0 if the GUEST_RUN_DONE marker was seen, 1 on timeout/error.
+Usage: python3 scripts/smoke_p1_drive.py <serial_sock> <serial_log> <http_port>
+Exit:   0 if GUEST_RUN_DONE was seen, 1 on timeout/error.
 """
 import os
 import re
@@ -19,14 +19,14 @@ import time
 
 SOCK = sys.argv[1]
 LOG = sys.argv[2]
+HTTP_PORT = sys.argv[3] if len(sys.argv) > 3 else "8765"
 DONE = "GUEST_RUN_DONE"
-BOOT_TIMEOUT = 180   # seconds to reach a login prompt / shell
-STEP_TIMEOUT = 60    # seconds for login / each mount step
-RUN_TIMEOUT = 600    # seconds for apk install + cmake build + 40s fbdev-host run
+BOOT_TIMEOUT = 180
+STEP_TIMEOUT = 60
+RUN_TIMEOUT = 900   # apk update + apk add + cmake build on a cold guest can be slow
 
 
 def main():
-    # wait for the socket to appear (QEMU just daemonized)
     for _ in range(300):
         if os.path.exists(SOCK):
             break
@@ -54,9 +54,9 @@ def main():
             if not data:
                 break
             text = data.decode("utf-8", "replace")
-            sys.stdout.write(text)   # stream to host console
+            sys.stdout.write(text)
             sys.stdout.flush()
-            log_f.write(text)        # + capture for the gates
+            log_f.write(text)
             log_f.flush()
             with lock:
                 buf.append(text)
@@ -88,40 +88,17 @@ def main():
     elif seen(r"#"):
         sys.stderr.write("[drive] already at a shell (auto-login)\n")
     else:
-        sys.stderr.write("[drive] no login prompt and no shell -- boot may have stalled\n")
         wait_for(r"#", STEP_TIMEOUT, "shell")
 
-    # 2. mount the 9p source share. The 9p device (id 0x0009) is attached, the
-    # filesystem is registered, and modules are loaded -- so an ENOENT on mount
-    # is a tag mismatch. Dump what tag the kernel actually registered (dmesg),
-    # then try host0 (what QEMU should set) + a couple of fallbacks, with/without
-    # the version= option, so whatever tag QEMU really used we still mount.
-    send("mkdir -p /mnt/src")
-    time.sleep(1)
-    send('modprobe 9pnet_virtio 2>/dev/null; modprobe 9p 2>/dev/null; sleep 2; '
-         'echo "=== virtio drivers ==="; '
-         'for d in /sys/bus/virtio/devices/virtio*; do '
-         'drv=$(readlink $d/driver 2>/dev/null); '
-         'echo "$(basename $d) driver=$(basename ${drv:-none}) mod=$(cat $d/modalias)"; '
-         'done; '
-         'echo "=== dmesg 9p/virtio_9p ==="; '
-         'dmesg | grep -iE "9p|vin|virtio_9p" | tail -20; echo DIAG_DONE')
-    time.sleep(4)
-    send('for t in host0 srcdev; do '
-         'for o in "trans=virtio,version=9p2000.L" "trans=virtio"; do '
-         'mount -t 9p -o "$o" "$t" /mnt/src 2>/dev/null '
-         '&& echo "MOUNTED_AS=$t OPT=$o" && break 2; '
-         'done; done; echo MTRY_DONE')
-    time.sleep(3)
-    send("ls /mnt/src/scripts/guest_smoke_p1.sh && echo MOUNT_OK || echo MOUNT_FAIL")
-    time.sleep(2)
-    if not seen(r"MOUNT_OK"):
-        sys.stderr.write("[drive] 9p mount did not land -- see dmesg + MOUNTED_AS above\n")
+    # 2. fetch the guest script over HTTP (QEMU user net: 10.0.2.2 = host)
+    send(f"wget -O /tmp/g.sh http://10.0.2.2:{HTTP_PORT}/scripts/guest_smoke_p1.sh 2>&1 | tail -2; echo GS=$?")
+    if not wait_for(r"GS=0", STEP_TIMEOUT, "fetch guest script (GS=0)"):
+        sys.stderr.write(f"[drive] guest script fetch failed -- host http.server on :{HTTP_PORT}? "
+                         f"QEMU -netdev user present?\n")
+        return 1
 
-    # 3. run the guest smoke script (apk + cmake build + discover event + run)
-    send("sh /mnt/src/scripts/guest_smoke_p1.sh")
-
-    # 4. wait for the done marker (apk + build + 40s fbdev-host run)
+    # 3. run the guest script (apk + wget source + build + run fbdev-host)
+    send("sh /tmp/g.sh")
     ok = wait_for(re.escape(DONE), RUN_TIMEOUT, "guest run done marker")
     sys.stderr.write(f"[drive] {'completed' if ok else 'timed out'}\n")
     return 0 if ok else 1
