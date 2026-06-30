@@ -94,17 +94,22 @@ def main():
     # 2. mount the 9p source share + verify the guest script is visible
     send("mkdir -p /mnt/src")
     time.sleep(1)
-    # make sure the 9p modules are loaded (diskless Alpine may defer them)
-    send("modprobe 9pnet_virtio 2>/dev/null; modprobe 9p 2>/dev/null; "
-         "ls /sys/bus/virtio/devices/ ; echo MODPROBE_DONE")
-    time.sleep(2)
+    # diagnostics: list each virtio device's modalias (9p device id = 0x0009),
+    # whether 9p is registered as a filesystem, and whether the modules loaded.
+    send('modprobe 9pnet_virtio 2>/dev/null; modprobe 9p 2>/dev/null; '
+         'for d in /sys/bus/virtio/devices/virtio*; do '
+         'echo "VDEV $(cat $d/modalias 2>/dev/null)"; done; '
+         'echo "9PFS $(grep 9p /proc/filesystems || echo none)"; '
+         'lsmod | grep 9p || echo "9PMOD none"; echo DIAG_DONE')
+    time.sleep(3)
     send("mount -t 9p -o trans=virtio,version=9p2000.L,ro host0 /mnt/src")
     time.sleep(3)
     send("ls /mnt/src/scripts/guest_smoke_p1.sh && echo MOUNT_OK || echo MOUNT_FAIL")
     time.sleep(2)
     if not seen(r"MOUNT_OK"):
-        sys.stderr.write("[drive] 9p mount did not land -- the guest script will fail; "
-                         "see MOUNT_FAIL / errors above\n")
+        sys.stderr.write("[drive] 9p mount did not land -- dumping dmesg 9p/virtio\n")
+        send("dmesg | grep -iE '9p|virtio' | tail -30")
+        time.sleep(2)
 
     # 3. run the guest smoke script (apk + cmake build + discover event + run)
     send("sh /mnt/src/scripts/guest_smoke_p1.sh")
