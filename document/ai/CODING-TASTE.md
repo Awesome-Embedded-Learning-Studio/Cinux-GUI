@@ -14,7 +14,7 @@ C++17（**不用 C++20**，不用 concepts/ranges）。禁异常、禁 RTTI。`c
 
 ## 2. 命名
 
-**文件**：`snake_case.hpp` / `snake_case.cpp`；host 适配用 `host_<name>.cpp`（如 `host_cinux.cpp`、`fake_host_main.cpp`）；测试 `test_<module>.cpp`。
+**文件**：`snake_case.hpp` / `snake_case.cpp`；host 适配用 `host_<name>.cpp`（如 `host_cinux.cpp`、`fake_host_main.cpp`）；**纯单测** `test/test_<module>.cpp`（放 `test/` 目录，不填 Host 表的单元测试）；host harness main（填 Host 表驱动 pump 的，含 fake/offscreen/replay/linux-fbdev）是 host 适配器形态，留 `host/`。
 
 | 元素 | 规则 | 示例 |
 |------|------|------|

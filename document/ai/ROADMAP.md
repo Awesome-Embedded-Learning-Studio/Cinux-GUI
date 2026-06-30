@@ -19,7 +19,7 @@
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | **P0** | 探针 Probe-0：无头跑通核心渲染管线（swraster 接 pump + offscreen host + 事件回放 + 极简场景 + 金帧验证） | 🔜 下一刀 |
-| **P1** | 探针 Probe-1：真 fbdev + evdev（第二个真 host，证明解耦缝） | 待启动 |
+| **P1** | 探针 Probe-1：真 fbdev + evdev（第二个真 host，证明解耦缝） | 进行中：代码✅ + 单测（4 ctest 绿）；QEMU 真 fbdev 冒烟待手动 |
 | **P2** | 渲染收敛核心：swraster 正式接管，compositor dirty-region（只重画脏区，省 composite 本身） | 待启动 |
 | **P3** | 控件工具箱：Button / Label / Slider / Container + 布局 + 事件路由 | 待启动 |
 | **P4** | 桌面迁入仓库：CinuxOS `kernel/gui/` 的 WM/terminal/desktop 搬上表、host-neutral；CinuxOS 只剩 `host_cinux` | 待启动 |
