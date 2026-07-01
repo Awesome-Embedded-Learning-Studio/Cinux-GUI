@@ -21,8 +21,9 @@ void TerminalWidget::clear() {
     for (uint32_t i = 0; i < kMaxCols * kMaxRows; ++i) {
         cells_[i] = 0;
     }
-    cur_col_ = 0;
-    cur_row_ = 0;
+    cur_col_    = 0;
+    cur_row_    = 0;
+    ansi_state_ = AnsiState::kNormal;
 }
 
 char TerminalWidget::cell_at(uint32_t col, uint32_t row) const {
@@ -53,6 +54,37 @@ void TerminalWidget::newline_() {
 }
 
 void TerminalWidget::put_char_(char ch) {
+    /* ANSI/VT100 escape consumer: swallow escape sequences whole so they never
+     * land in the cell grid. Only kNormal falls through to byte handling. */
+    switch (ansi_state_) {
+        case AnsiState::kEsc:
+            if (ch == '[') {
+                ansi_state_ = AnsiState::kCsi;
+            } else if (ch == ']') {
+                ansi_state_ = AnsiState::kOsc;
+            } else {
+                ansi_state_ = AnsiState::kNormal;  // ESC + single byte: consumed
+            }
+            return;
+        case AnsiState::kCsi:
+            if (ch >= 0x40 && ch <= 0x7E) {  // final byte ends CSI
+                ansi_state_ = AnsiState::kNormal;
+            }
+            return;
+        case AnsiState::kOsc:
+            if (ch == 0x07) {  // BEL ends OSC (ST/ESC\ not handled -- rare)
+                ansi_state_ = AnsiState::kNormal;
+            }
+            return;
+        case AnsiState::kNormal:
+        default:
+            if (ch == 0x1B) {  // ESC starts an escape
+                ansi_state_ = AnsiState::kEsc;
+                return;
+            }
+            break;  // fall through to normal byte handling
+    }
+
     switch (ch) {
         case '\n':
             newline_();
@@ -75,7 +107,7 @@ void TerminalWidget::put_char_(char ch) {
             break;
     }
     if (static_cast<uint8_t>(ch) < 0x20u) {
-        return;  // other control bytes: drop (no ANSI parsing yet)
+        return;  // other control bytes: drop
     }
     cells_[cur_row_ * kMaxCols + cur_col_] = ch;
     ++cur_col_;

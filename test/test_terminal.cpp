@@ -99,6 +99,26 @@ int main() {
         assert(has_fill && has_glyph);
     }
 
+    /* --- 7. ANSI escape sequences are swallowed, not displayed --- */
+    {
+        TerminalWidget t;
+        t.write("A\x1b[31mB\x1b[0mC");  // SGR colour wrapped around B
+        assert(t.cell_at(0, 0) == 'A');
+        assert(t.cell_at(1, 0) == 'B');
+        assert(t.cell_at(2, 0) == 'C');
+        assert(t.cursor_col() == 3);
+
+        TerminalWidget t2;
+        t2.write("\x1b[?2004h$ ");  // bracketed-paste enable + prompt
+        assert(t2.cell_at(0, 0) == '$');
+        assert(t2.cell_at(1, 0) == ' ');
+        assert(t2.cursor_col() == 2);
+
+        TerminalWidget t3;
+        t3.write("\x1b]0;title\x07X");  // OSC title + X
+        assert(t3.cell_at(0, 0) == 'X');
+    }
+
     std::printf("test_terminal: OK\n");
     return 0;
 }

@@ -61,6 +61,12 @@ protected:
     void paint_to_list(PaintList& list) const override;
 
 private:
+    /* Minimal ANSI/VT100 escape-sequence consumer state (see put_char_). CSI =
+     * ESC [ ... <final 0x40-0x7E>; OSC = ESC ] ... BEL; ESC + other byte is a
+     * one-byte sequence. Swallowed whole so shell output (bracketed paste, SGR
+     * colour, cursor moves, OSC title) never reaches the cell grid. */
+    enum class AnsiState : uint8_t { kNormal, kEsc, kCsi, kOsc };
+
     void put_char_(char ch);
     void newline_();
     void scroll_up_();
@@ -71,6 +77,7 @@ private:
     uint32_t     cur_col_                    = 0;
     uint32_t     cur_row_                    = 0;
     const Theme* theme_                      = nullptr;
+    AnsiState    ansi_state_                 = AnsiState::kNormal;
 };
 
 }  // namespace cinux::gui
