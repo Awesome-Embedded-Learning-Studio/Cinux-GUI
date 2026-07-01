@@ -26,12 +26,17 @@ void PaintList::fill_rect(int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t
 
 void PaintList::fill_round_rect(int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color,
                                 uint32_t radius) {
+    fill_round_rect_corners(x, y, w, h, color, radius, 0xFu);  // all corners (P5-d)
+}
+
+void PaintList::fill_round_rect_corners(int32_t x, int32_t y, uint32_t w, uint32_t h,
+                                        uint32_t color, uint32_t radius, uint32_t corners) {
     if (count_ >= kMaxCmds) {
         return;
     }
     PaintCmd& c = cmds_[count_++];
     c.kind      = CmdKind::kFillRoundRect;
-    c.rfill     = {x, y, w, h, color, radius};
+    c.rfill     = {x, y, w, h, color, radius, corners};
 }
 
 void PaintList::text(int32_t x, int32_t y, uint32_t color, const char* str) {

@@ -119,6 +119,11 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(dirty-test PRIVATE cinux-gui)
     add_test(NAME dirty-test COMMAND dirty-test)
 
+    # P5-d: HBox/VBox flex weights + per-corner rounded rects.
+    add_executable(flex-test test/test_flex.cpp)
+    target_link_libraries(flex-test PRIVATE cinux-gui)
+    add_test(NAME flex-test COMMAND flex-test)
+
     # P3-c: basic widgets (Label/Button/Container) + HBox/VBox layout.
     add_executable(widgets-test test/test_widgets.cpp)
     target_link_libraries(widgets-test PRIVATE cinux-gui)

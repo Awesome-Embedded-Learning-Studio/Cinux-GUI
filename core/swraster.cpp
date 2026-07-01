@@ -91,11 +91,11 @@ void fill_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_
 }
 
 void fill_rounded_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color,
-                       uint32_t radius, const ClipRect* clip) {
+                       uint32_t radius, const ClipRect* clip, uint32_t corners) {
     if (s.format != PixelFormat::kXrgb8888 || w == 0u || h == 0u) {
         return;
     }
-    /* Clamp radius to min(w,h)/2 so the four corner arcs never overlap. */
+    /* Clamp radius to min(w,h)/2 so corner arcs never overlap. */
     uint32_t r      = radius;
     uint32_t half_w = w / 2u;
     uint32_t half_h = h / 2u;
@@ -105,7 +105,7 @@ void fill_rounded_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h,
     if (r > half_h) {
         r = half_h;
     }
-    if (r == 0u) {
+    if (r == 0u || corners == 0u) {
         fill_rect(s, x, y, w, h, color, clip);
         return;
     }
@@ -128,26 +128,39 @@ void fill_rounded_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h,
     const int32_t  ir  = static_cast<int32_t>(r);
     const int32_t  ih  = static_cast<int32_t>(h);
 
+    /* P5-d: per-corner. Each row computes how far the arc bites in from the
+     * left/right edge, considering only the enabled corners near the top and
+     * bottom edges. A square corner bites in 0. */
     for (int32_t py = ry0; py < ry1; py++) {
-        const int32_t iy = py - y; /* 0..h-1, row within the rounded rect */
-        /* Mirror bottom-corner rows up so the same offset math applies. */
-        int32_t row = iy;
-        if (iy >= ih - ir) {
-            row = ih - 1 - iy;
-        }
-        int32_t off = 0;
-        if (row < ir) {
-            /* d = rows from the corner's circle centre; off = r - isqrt(r²-d²)
-             * is how far the arc bites in from the left/right edge this row. */
-            const int32_t  d      = ir - 1 - row;
+        const int32_t iy    = py - y;      /* 0..h-1 */
+        const int32_t top_d = iy;          /* rows from the top edge */
+        const int32_t bot_d = ih - 1 - iy; /* rows from the bottom edge */
+        int32_t       off_l = 0;
+        int32_t       off_r = 0;
+        if (top_d < ir && (corners & (kCornerTL | kCornerTR)) != 0u) {
+            const int32_t  d      = ir - 1 - top_d;
             const uint32_t inside = (d >= 0) ? rr - static_cast<uint32_t>(d) * d : rr;
-            off                   = ir - static_cast<int32_t>(isqrt_u32(inside));
-            if (off < 0) {
-                off = 0;
+            const int32_t  off    = ir - static_cast<int32_t>(isqrt_u32(inside));
+            if ((corners & kCornerTL) != 0u && off > off_l) {
+                off_l = off;
+            }
+            if ((corners & kCornerTR) != 0u && off > off_r) {
+                off_r = off;
             }
         }
-        int32_t sx0 = x + off;
-        int32_t sx1 = x1 - off;
+        if (bot_d < ir && (corners & (kCornerBL | kCornerBR)) != 0u) {
+            const int32_t  d      = ir - 1 - bot_d;
+            const uint32_t inside = (d >= 0) ? rr - static_cast<uint32_t>(d) * d : rr;
+            const int32_t  off    = ir - static_cast<int32_t>(isqrt_u32(inside));
+            if ((corners & kCornerBL) != 0u && off > off_l) {
+                off_l = off;
+            }
+            if ((corners & kCornerBR) != 0u && off > off_r) {
+                off_r = off;
+            }
+        }
+        int32_t sx0 = x + off_l;
+        int32_t sx1 = x1 - off_r;
         if (sx0 < rx0) {
             sx0 = rx0;
         }

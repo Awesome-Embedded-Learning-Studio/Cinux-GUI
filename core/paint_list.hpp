@@ -52,6 +52,7 @@ struct FillRoundRectCmd {
     uint32_t h;
     uint32_t color;
     uint32_t radius;
+    uint32_t corners;  // P5-d: kCorner* bitmask (swraster.hpp); 0xF = all rounded
 };
 
 struct TextCmd {
@@ -120,6 +121,9 @@ public:
     void fill_rect(int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color);
     void fill_round_rect(int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color,
                          uint32_t radius);
+    /** Rounded rect with per-corner selection (P5-d). @p corners = kCorner* bitmask. */
+    void fill_round_rect_corners(int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color,
+                                 uint32_t radius, uint32_t corners);
     void text(int32_t x, int32_t y, uint32_t color, const char* str);
     /** Inlined single-char draw (no borrowed pointer) -- for char-dense widgets. */
     void text_glyph(int32_t x, int32_t y, uint32_t color, char ch);

@@ -209,7 +209,7 @@ void execute(Surface& staging, const PaintList& list, const PsfFont& font) {
                 break;
             case CmdKind::kFillRoundRect:
                 fill_rounded_rect(staging, c.rfill.x, c.rfill.y, c.rfill.w, c.rfill.h,
-                                  c.rfill.color, c.rfill.radius, cur());
+                                  c.rfill.color, c.rfill.radius, cur(), c.rfill.corners);
                 break;
             case CmdKind::kText:
                 draw_text(staging, font, c.text.text, c.text.x, c.text.y, c.text.color, cur());

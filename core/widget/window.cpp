@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 
+#include "swraster.hpp"  // kCornerTL/TR (P5-d per-corner title bar)
+
 namespace cinux::gui {
 
 void Window::set_content(Widget* c) {
@@ -114,8 +116,11 @@ void Window::paint_to_list(PaintList& list) const {
      *    top corners, so only the bottom corners read rounded (P4-a). */
     list.fill_round_rect(rect_.x0, rect_.y0, rect_.width(), rect_.height(), surface, radius);
 
-    /* 2. Title-bar band: solid primary rectangle across the top. */
-    list.fill_rect(rect_.x0, rect_.y0, rect_.width(), kTitleBarHeight, primary);
+    /* 2. Title-bar band: top corners rounded (TL|TR), bottom square -> it meets
+     *    the content area cleanly instead of overpainting the body's top corners
+     *    (P5-d per-corner radius). */
+    list.fill_round_rect_corners(rect_.x0, rect_.y0, rect_.width(), kTitleBarHeight, primary,
+                                 radius, kCornerTL | kCornerTR);
 
     /* 3. Title text, left-padded. */
     if (title_ != nullptr && title_[0] != '\0') {

@@ -122,7 +122,8 @@ int main() {
         hbox.layout();
         CHECK(a.rect().x0 == 0 && a.rect().width() == 93, "hbox child a");
         CHECK(b.rect().x0 == 103 && b.rect().width() == 93, "hbox child b");
-        CHECK(c.rect().x0 == 206 && c.rect().width() == 93, "hbox child c");
+        CHECK(c.rect().x0 == 206 && c.rect().width() == 94,
+              "hbox child c (P5-d: last child gets the remainder)");
     }
 
     // 4. VBox layout: 2 children equal height + 10px gap

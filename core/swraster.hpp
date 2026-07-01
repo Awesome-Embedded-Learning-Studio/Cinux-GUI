@@ -66,16 +66,25 @@ struct Surface {
 void fill_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color,
                const ClipRect* clip);
 
+/* Per-corner selection for fill_rounded_rect (P5-d). Bitmask; kCornerAll = all
+ * four rounded. A corner bit cleared leaves that corner square. */
+inline constexpr uint32_t kCornerTL  = 1u;  // top-left
+inline constexpr uint32_t kCornerTR  = 2u;  // top-right
+inline constexpr uint32_t kCornerBL  = 4u;  // bottom-left
+inline constexpr uint32_t kCornerBR  = 8u;  // bottom-right
+inline constexpr uint32_t kCornerAll = 0xFu;
+
 /**
- * @brief Solid rounded-rectangle fill (Material shape; P3-b)
+ * @brief Solid rounded-rectangle fill (Material shape; P3-b, per-corner P5-d)
  *
- * Like fill_rect but with @p radius-pixel rounded corners. The radius is
- * clamped to min(w,h)/2 so corner arcs never overlap; radius == 0 is exactly
- * fill_rect. Integer-only: per-row corner offset via an integer isqrt
- * (floor(sqrt(r²-d²))). XRGB8888 only; other formats no-op.
+ * Like fill_rect but with @p radius-pixel rounded corners on the corners
+ * selected by @p corners (kCorner* bitmask; kCornerAll = all four). radius is
+ * clamped to min(w,h)/2; radius == 0 or corners == 0 is exactly fill_rect.
+ * Integer-only: per-row corner offset via integer isqrt (floor(sqrt(r²-d²))).
+ * XRGB8888 only; other formats no-op.
  */
 void fill_rounded_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color,
-                       uint32_t radius, const ClipRect* clip);
+                       uint32_t radius, const ClipRect* clip, uint32_t corners = kCornerAll);
 
 /**
  * @brief Opaque pixel copy src -> dst (generalises Canvas::blit)

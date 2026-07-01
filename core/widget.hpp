@@ -48,6 +48,10 @@ public:
     void set_visible(bool v) { visible_ = v; }
     bool visible() const { return visible_; }
 
+    /** Flex weight for HBox/VBox layout (P5-d). Default 1 = equal share. */
+    void     set_flex(uint32_t f) { flex_ = f; }
+    uint32_t flex() const { return flex_; }
+
     void     add_child(Widget* w);
     uint32_t child_count() const { return child_count_; }
     Widget*  child(uint32_t i) const { return i < child_count_ ? children_[i] : nullptr; }
@@ -111,6 +115,7 @@ protected:
     uint32_t child_count_            = 0u;
     Widget*  parent_                 = nullptr;  // P5-c: set by add_child
     bool     dirty_                  = true;     // P5-c: repaint requested (start dirty)
+    uint32_t flex_                   = 1u;       // P5-d: HBox/VBox weight (1 = equal)
 };
 
 /**
