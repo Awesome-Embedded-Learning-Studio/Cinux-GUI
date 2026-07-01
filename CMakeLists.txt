@@ -69,4 +69,16 @@ if(CINUX_GUI_STANDALONE)
     add_executable(replay-dump host/replay_host_main.cpp host/ppm_writer.cpp)
     target_link_libraries(replay-dump PRIVATE cinux-gui)
     add_test(NAME replay-dump COMMAND replay-dump)
+
+    # P1 Probe-1: evdev accumulator unit test (pure logic, no device). IS a ctest.
+    add_executable(evdev-test test/test_evdev.cpp host/evdev_device.cpp)
+    target_include_directories(evdev-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/host)
+    target_link_libraries(evdev-test PRIVATE cinux-gui)
+    add_test(NAME evdev-test COMMAND evdev-test)
+
+    # P1 Probe-1: real Linux fbdev+evdev host. Manual smoke under QEMU only
+    # (needs /dev/fb0 + /dev/input/event*); NOT a ctest.
+    add_executable(fbdev-host host/linux_fbdev_main.cpp host/fbdev_device.cpp
+                          host/evdev_device.cpp)
+    target_link_libraries(fbdev-host PRIVATE cinux-gui)
 endif()
