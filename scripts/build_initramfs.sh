@@ -8,6 +8,9 @@ BUSYBOX_ROOT="$ROOT/build/smoke/busybox-root"
 FBDEV_HOST="$ROOT/build/smoke/fbdev-host-static"
 INITRAMFS_ROOT="$ROOT/build/smoke/initramfs"
 CPIO="$ROOT/build/smoke/rootfs.cpio.gz"
+# how long (s) /init lets fbdev-host run before timeout-killing it back to a
+# shell. 40s for CI smoke; override FBDEV_TIMEOUT for interactive VNC viewing.
+FBDEV_TIMEOUT="${FBDEV_TIMEOUT:-40}"
 log() { printf '[initramfs] %s\n' "$*"; }
 die() { log "FAIL: $*"; exit 1; }
 
@@ -65,6 +68,9 @@ echo "GUEST_RUN_RC=$?"
 echo "GUEST_RUN_DONE"
 exec /bin/sh
 INIT_EOF
+# inject the requested fbdev-host run duration (heredoc is single-quoted, so we
+# patch the literal `timeout 40` after the fact).
+sed -i "s/^timeout 40 /timeout ${FBDEV_TIMEOUT} /" "$INITRAMFS_ROOT/init"
 chmod +x "$INITRAMFS_ROOT/init"
 
 log "pack: $CPIO"
