@@ -75,6 +75,13 @@ public:
      */
     void process_pointer(const PointerPayload& p);
 
+    /** P7-c: the Compositor paints the cursor from this position (not WM paint). */
+    bool cursor_pos(int32_t* x, int32_t* y) const override {
+        *x = cursor_x_;
+        *y = cursor_y_;
+        return cursor_visible_;
+    }
+
 protected:
     void    paint_to_list(PaintList& list) const override;
     void    collect_dirty(Region& sink) const override;  // P5-f: recurse windows_ (not children_)

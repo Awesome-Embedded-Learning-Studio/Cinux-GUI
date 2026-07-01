@@ -108,12 +108,16 @@ void Desktop::render(Surface& staging, const PsfFont& font, Region* dirty) {
     root_->layout();
     PaintList list;
     root_->flatten(list);
-    Compositor     comp;  // P6-d: class -- add primitives via set_handler, not a switch
+    /* P7-c: the Compositor owns the cursor; ask the root (WM) where it is. */
+    int32_t    cx         = 0;
+    int32_t    cy         = 0;
+    const bool has_cursor = root_->cursor_pos(&cx, &cy);
+    comp_.set_cursor(cx, cy, has_cursor);
     const uint32_t n = d->count();
     for (uint32_t i = 0u; i < n; ++i) {  // repaint each dirty rect, clipped to it
         const Rect&    r = d->rects()[i];
         const ClipRect clip{r.x0, r.y0, r.x1, r.y1};
-        comp.render(staging, list, font, &clip);
+        comp_.render(staging, list, font, &clip);
     }
 }
 

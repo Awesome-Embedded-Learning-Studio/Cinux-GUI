@@ -21,7 +21,8 @@
 
 #include <stdint.h>
 
-#include "event_payload.hpp"  // PointerPayload
+#include "compositor.hpp"     // Compositor (Desktop owns one, P7-c)
+#include "event_payload.hpp"  // PointerPayload / KeycodePayload
 #include "paint_list.hpp"     // PaintList
 #include "region.hpp"         // Rect
 
@@ -78,6 +79,13 @@ public:
     virtual void on_pointer(const PointerPayload& p) { (void)p; }
     /** Receive a keyboard event routed to this widget (P6-a). Default: noop. */
     virtual void on_key(const KeycodePayload& k) { (void)k; }
+    /** P7-c: expose a cursor position for the Compositor to paint. Default: none
+     * (returns false). WindowManager overrides (it tracks the cursor). */
+    virtual bool cursor_pos(int32_t* x, int32_t* y) const {
+        (void)x;
+        (void)y;
+        return false;
+    }
 
     /**
      * @brief Recompute children's rects (containers override; P3-c)
@@ -155,10 +163,11 @@ public:
     void render(Surface& staging, const PsfFont& font, Region* dirty);
 
 private:
-    Widget* root_         = nullptr;
-    Widget* press_target_ = nullptr;  // P3-d: press capture (drag tracks the press widget)
-    Widget* focus_        = nullptr;  // P6-a: keyboard focus (set on pointer down)
-    bool    first_        = true;     // P5-f: paint full screen on frame 1
+    Widget*    root_         = nullptr;
+    Widget*    press_target_ = nullptr;  // P3-d: press capture (drag tracks the press widget)
+    Widget*    focus_        = nullptr;  // P6-a: keyboard focus (set on pointer down)
+    bool       first_        = true;     // P5-f: paint full screen on frame 1
+    Compositor comp_;                    // P7-c: owns cursor state + paint handlers
 };
 
 }  // namespace cinux::gui

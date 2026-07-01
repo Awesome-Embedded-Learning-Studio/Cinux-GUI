@@ -118,6 +118,11 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(dropdown-test PRIVATE cinux-gui)
     add_test(NAME dropdown-test COMMAND dropdown-test)
 
+    # P7-c: Compositor cursor state (set_cursor + render paints a block).
+    add_executable(cursor-test test/test_cursor.cpp)
+    target_link_libraries(cursor-test PRIVATE cinux-gui)
+    add_test(NAME cursor-test COMMAND cursor-test)
+
     # P6-b: Window resize grip + maximize/minimize.
     add_executable(resize-test test/test_resize.cpp)
     target_link_libraries(resize-test PRIVATE cinux-gui)

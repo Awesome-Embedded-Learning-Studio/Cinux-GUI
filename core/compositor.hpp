@@ -66,9 +66,15 @@ public:
     void render(Surface& staging, const PaintList& list, const PsfFont& font,
                 const ClipRect* outer = nullptr);
 
+    /** P7-c: cursor state. render() paints a 4x4 block at (x,y) when visible. */
+    void set_cursor(int32_t x, int32_t y, bool visible);
+
 private:
     static constexpr uint32_t kKindCount            = 7u;  // kFillRect..kClipPop (see CmdKind)
     Handler                   handlers_[kKindCount] = {};
+    int32_t                   cursor_x_       = 0;  // P7-c: cursor footprint (state in the class)
+    int32_t                   cursor_y_       = 0;
+    bool                      cursor_visible_ = false;
 };
 
 }  // namespace cinux::gui

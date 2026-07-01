@@ -117,10 +117,8 @@ void WindowManager::paint_to_list(PaintList& list) const {
         windows_[i]->flatten(list);
     }
 
-    /* 3. Software cursor on top of everything. */
-    if (cursor_visible_) {
-        list.fill_rect(cursor_x_, cursor_y_, kCursorSize, kCursorSize, 0x00FFFFFFu);
-    }
+    /* P7-c: cursor is now painted by the Compositor (it reads cursor_pos()),
+     * not here -- the cursor lives in the compositor's state, on top of everything. */
 }
 
 void WindowManager::collect_dirty(Region& sink) const {

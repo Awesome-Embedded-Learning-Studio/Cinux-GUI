@@ -107,6 +107,12 @@ void Compositor::set_handler(CmdKind kind, Handler h) {
     }
 }
 
+void Compositor::set_cursor(int32_t x, int32_t y, bool visible) {  // P7-c
+    cursor_x_       = x;
+    cursor_y_       = y;
+    cursor_visible_ = visible;
+}
+
 void Compositor::render(Surface& staging, const PaintList& list, const PsfFont& font,
                         const ClipRect* outer) {
     /* Clip stack: each kClipPush intersects with its parent (and the optional
@@ -146,6 +152,13 @@ void Compositor::render(Surface& staging, const PaintList& list, const PsfFont& 
         if (k < kKindCount && handlers_[k] != nullptr) {
             handlers_[k](staging, c, font, cur());
         }
+    }
+
+    /* P7-c: cursor on top of everything (a 4x4 block; state owned by the class).
+     * Clipped to cur() so under per-rect render it only paints inside the dirty
+     * rect that actually contains the cursor (no double-paint across rects). */
+    if (cursor_visible_) {
+        fill_rect(staging, cursor_x_, cursor_y_, 4u, 4u, 0x00FFFFFFu, cur());
     }
 }
 

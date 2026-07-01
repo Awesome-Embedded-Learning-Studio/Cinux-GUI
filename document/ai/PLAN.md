@@ -139,7 +139,7 @@
 |---|---|---|---|---|
 | **P7-a** | Radio + RadioGroup（非 Widget 单选管理器）+ Dropdown（rect 全列表高，closed 顶行/expanded 全 + 高亮） | ✅ | — | radio-test（互斥）+ dropdown-test（open/select/close）ctest 21/21 |
 | **P7-b** | sdl-host 补键盘路由（SDL_TEXTINPUT/BACKSPACE → dispatch_key）+ TextBox/Radio/Dropdown demo（手动布局，per-rect upload） | ✅ | — | sdl-host 编译过（WSLg 眼检：键盘输入/单选/下拉） |
-| **P7-c** | Compositor cursor footprint：cursor 渲染从 WM paint 移进 Compositor（持 cursor 状态），WM 只 set_cursor；handler 表已铺路（状态进类不动调用方） | 🔜 NEXT | — | cursor-test（Compositor cursor 渲染）+ WM 适配 |
+| **P7-c** | Compositor cursor 状态：cursor 渲染从 WM paint 移进 Compositor（cursor 成员 + set_cursor + render 末画，受 dirty rect clip）；Widget cursor_pos virtual + WM override；Desktop comp_ 成员（跨帧）；WM paint 去 cursor | ✅ | — | cursor-test（Compositor cursor 像素）+ ctest 22/22 + ASAN |
 
 ## 验证哲学
 
