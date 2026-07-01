@@ -193,6 +193,15 @@ void execute(Surface& staging, const PaintList& list, const PsfFont& font) {
             case CmdKind::kText:
                 draw_text(staging, font, c.text.text, c.text.x, c.text.y, c.text.color, cur());
                 break;
+            case CmdKind::kTextGlyph: {
+                /* Single inlined char -- no borrowed pointer (terminal cells). */
+                const uint8_t* bits = font.glyph(static_cast<uint8_t>(c.glyph.ch));
+                if (bits != nullptr) {
+                    glyph_blit(staging, c.glyph.x, c.glyph.y, bits, font.width(), font.height(),
+                               c.glyph.color, cur());
+                }
+                break;
+            }
             case CmdKind::kClipPush: {
                 if (top + 1 < static_cast<int32_t>(kMaxClip)) {
                     ClipRect pushed{c.clip.x0, c.clip.y0, c.clip.x1, c.clip.y1};

@@ -50,6 +50,7 @@ add_library(cinux-gui STATIC
     core/widget/slider.cpp
     core/widget/window.cpp
     core/widget/window_manager.cpp
+    core/widget/terminal.cpp
     core/abi_check.cpp
 )
 # core/ is PUBLIC so consumers (a host adapter, the harness) resolve the bare
@@ -127,6 +128,11 @@ if(CINUX_GUI_STANDALONE)
     add_executable(window-manager-test test/test_window_manager.cpp)
     target_link_libraries(window-manager-test PRIVATE cinux-gui)
     add_test(NAME window-manager-test COMMAND window-manager-test)
+
+    # P4-c: TerminalWidget (char grid + write/scroll/paint).
+    add_executable(terminal-test test/test_terminal.cpp)
+    target_link_libraries(terminal-test PRIVATE cinux-gui)
+    add_test(NAME terminal-test COMMAND terminal-test)
 
     # P3-d: widgets demo host (Material widget tree -> one PPM frame).
     add_executable(widgets-dump host/widgets_host_main.cpp host/ppm_writer.cpp)
