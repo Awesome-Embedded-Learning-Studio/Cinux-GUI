@@ -127,8 +127,8 @@
 | 批 | 范围 | 状态 | commit | 测试 |
 |---|---|---|---|---|
 | **P6-a** | TextBox（键盘输入 + 光标）+ Checkbox(toggle) + Widget on_key/Desktop dispatch_key+focus 键盘路由 | ✅ | — | textbox-test + checkbox-test（ctest 21/21 + ASAN）；sdl-host 键盘 demo 留眼检 |
-| **P6-b** | 窗口 resize（边框 handle 拖调大小）+ 最大化/最小化/还原 | 🔜 NEXT | — | resize-test + 最大化几何 |
-| **P6-c** | 终端 ANSI bg(40-47) + 256 色(38;5;N) + 光标块(visible cursor) | 🔜 | — | terminal-bg256-test |
+| **P6-b** | 窗口 resize（右下角 grip 拖调大小，min 40×24）+ 最大化/还原（set_maximized 存 prev）+ 最小化（set_minimized hide） | ✅ | — | resize-test（拖调 + maximize 还原 + minimize hide） |
+| **P6-c** | 终端 ANSI bg(40-47) + 256 色(38;5;N) + 光标块(visible cursor) | 🔜 NEXT | — | terminal-bg256-test |
 | **P6-d** | Scene 退役（迁 offscreen/replay host 控件树 + 删 `core/scene.*` + compose(Scene) + test_scene/test_compositor） | 🔜 | — | 迁移零回归 + Scene 删后 ctest 绿 |
 
 ## 验证哲学

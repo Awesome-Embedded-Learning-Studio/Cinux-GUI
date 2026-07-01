@@ -125,6 +125,11 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(checkbox-test PRIVATE cinux-gui)
     add_test(NAME checkbox-test COMMAND checkbox-test)
 
+    # P6-b: Window resize grip + maximize/minimize.
+    add_executable(resize-test test/test_resize.cpp)
+    target_link_libraries(resize-test PRIVATE cinux-gui)
+    add_test(NAME resize-test COMMAND resize-test)
+
     # P5-c: per-widget dirty + Desktop::render idle skip.
     add_executable(dirty-test test/test_dirty.cpp)
     target_link_libraries(dirty-test PRIVATE cinux-gui)

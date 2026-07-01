@@ -62,12 +62,27 @@ bool Window::in_close_button_(int32_t x, int32_t y) const {
            y < by + static_cast<int32_t>(kCloseButtonSize);
 }
 
+void Window::resize_handle_rect_(int32_t* x, int32_t* y) const {  // P6-b
+    *x = rect_.x1 - static_cast<int32_t>(kResizeHandle);
+    *y = rect_.y1 - static_cast<int32_t>(kResizeHandle);
+}
+
+bool Window::in_resize_handle_(int32_t x, int32_t y) const {  // P6-b
+    int32_t hx = 0;
+    int32_t hy = 0;
+    resize_handle_rect_(&hx, &hy);
+    return x >= hx && x < rect_.x1 && y >= hy && y < rect_.y1;
+}
+
 Widget* Window::hit_test(int32_t x, int32_t y) {
     if (!visible_ || !rect_.contains(x, y)) {
         return nullptr;
     }
     if (in_close_button_(x, y)) {
         return this;  // close button -> Window handles
+    }
+    if (in_resize_handle_(x, y)) {
+        return this;  // P6-b: resize grip -> Window handles
     }
     if (in_title_bar_(x, y)) {
         return this;  // title-bar drag -> Window handles
@@ -84,7 +99,13 @@ void Window::on_pointer(const PointerPayload& p) {
     if (p.kind == kPointerKindDown) {
         if (in_close_button_(p.x, p.y)) {
             close_armed_ = true;
-            invalidate();  // P5-c: close button armed
+            invalidate();                          // P5-c: close button armed
+        } else if (in_resize_handle_(p.x, p.y)) {  // P6-b: resize grip
+            resizing_ = true;
+            rw_px_    = p.x;
+            rw_py_    = p.y;
+            rw_ow_    = static_cast<int32_t>(rect_.width());
+            rw_oh_    = static_cast<int32_t>(rect_.height());
         } else if (in_title_bar_(p.x, p.y)) {
             dragging_ = true;
             drag_px_  = p.x;
@@ -96,12 +117,27 @@ void Window::on_pointer(const PointerPayload& p) {
     } else if (p.kind == kPointerKindMove) {
         if (dragging_) {
             move_to_(win_ox_ + (p.x - drag_px_), win_oy_ + (p.y - drag_py_));
+        } else if (resizing_) {  // P6-b: drag the grip -> grow/shrink
+            int32_t nw = rw_ow_ + (p.x - rw_px_);
+            int32_t nh = rw_oh_ + (p.y - rw_py_);
+            if (nw < 40) {
+                nw = 40;
+            }                                                      // min width
+            if (nh < static_cast<int32_t>(kTitleBarHeight) + 4) {  // min height
+                nh = static_cast<int32_t>(kTitleBarHeight) + 4;
+            }
+            const Rect old = rect_;
+            set_rect(rect_.x0, rect_.y0, static_cast<uint32_t>(nw), static_cast<uint32_t>(nh));
+            layout();
+            invalidate(old);
+            invalidate();
         }
     } else if (p.kind == kPointerKindUp) {
         if (close_armed_ && in_close_button_(p.x, p.y) && on_close_ != nullptr) {
             on_close_(on_close_ctx_, this);
         }
         dragging_    = false;
+        resizing_    = false;
         close_armed_ = false;
         invalidate();
     }
@@ -140,6 +176,34 @@ void Window::paint_to_list(PaintList& list) const {
     } else {
         list.text(cx + 4, cy + 2, on_primary, "x");
     }
+
+    /* 5. P6-b: resize grip at the bottom-right (8x8 outline square). */
+    int32_t hx = 0;
+    int32_t hy = 0;
+    resize_handle_rect_(&hx, &hy);
+    const uint32_t outline = has_theme ? theme_->outline : 0x00888888u;
+    list.fill_rect(hx, hy, kResizeHandle, kResizeHandle, outline);
+}
+
+void Window::set_maximized(bool m, Rect full) {  // P6-b
+    if (m && !maximized_) {
+        prev_rect_ = rect_;
+        set_rect(full.x0, full.y0, full.width(), full.height());
+        maximized_ = true;
+        layout();
+        invalidate();
+    } else if (!m && maximized_) {
+        set_rect(prev_rect_.x0, prev_rect_.y0, prev_rect_.width(), prev_rect_.height());
+        maximized_ = false;
+        layout();
+        invalidate();
+    }
+}
+
+void Window::set_minimized(bool m) {  // P6-b
+    minimized_ = m;
+    set_visible(!m);  // hide: Widget::flatten / hit_test skip invisible
+    invalidate();
 }
 
 }  // namespace cinux::gui

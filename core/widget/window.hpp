@@ -49,6 +49,7 @@ public:
     static constexpr uint32_t kCloseButtonSize = 20;
     static constexpr uint32_t kTitlePadX       = 8;
     static constexpr uint32_t kTitlePadY       = 4;
+    static constexpr uint32_t kResizeHandle    = 8;  // P6-b: bottom-right resize grip
 
     void set_title(const char* t) { title_ = t; }
     void set_theme(const Theme* th) { theme_ = th; }
@@ -63,6 +64,13 @@ public:
 
     /** Rect of the content area (below the title bar); valid after layout(). */
     Rect content_rect() const;
+
+    /** P6-b: maximize -> store current rect + fill @p full; false restores. */
+    void set_maximized(bool m, Rect full);
+    bool maximized() const { return maximized_; }
+    /** P6-b: minimize -> hide (parent stops painting + hit-testing it). */
+    void set_minimized(bool m);
+    bool minimized() const { return minimized_; }
 
     /* Overrides kept public to match Widget's access: Desktop drives layout /
      * hit_test via Widget*, but tests and hosts also call them directly on a
@@ -79,6 +87,8 @@ private:
     bool in_title_bar_(int32_t x, int32_t y) const;
     bool in_close_button_(int32_t x, int32_t y) const;
     void close_button_rect_(int32_t* x, int32_t* y) const;
+    bool in_resize_handle_(int32_t x, int32_t y) const;      // P6-b
+    void resize_handle_rect_(int32_t* x, int32_t* y) const;  // P6-b
 
     const char*   title_        = "";
     const Theme*  theme_        = nullptr;
@@ -95,6 +105,17 @@ private:
 
     /* Close-button press state. */
     bool close_armed_ = false;
+
+    /* P6-b: resize state (bottom-right grip press). */
+    bool    resizing_ = false;
+    int32_t rw_px_    = 0;  // press origin
+    int32_t rw_py_    = 0;
+    int32_t rw_ow_    = 0;  // window size at press
+    int32_t rw_oh_    = 0;
+    /* P6-b: maximize / minimize. */
+    bool maximized_ = false;
+    Rect prev_rect_ = Rect{1, 1, 0, 0};
+    bool minimized_ = false;
 };
 
 }  // namespace cinux::gui
