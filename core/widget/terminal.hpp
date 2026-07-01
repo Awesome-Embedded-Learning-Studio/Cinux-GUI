@@ -56,28 +56,35 @@ public:
     uint32_t rows() const { return rows_; }
     /** Cell at (col,row); 0 if empty or out of the configured grid. */
     char cell_at(uint32_t col, uint32_t row) const;
+    /** Foreground colour index (0-15) of the cell at (col,row). P5-e. */
+    uint8_t fg_at(uint32_t col, uint32_t row) const;
 
 protected:
     void paint_to_list(PaintList& list) const override;
 
 private:
-    /* Minimal ANSI/VT100 escape-sequence consumer state (see put_char_). CSI =
-     * ESC [ ... <final 0x40-0x7E>; OSC = ESC ] ... BEL; ESC + other byte is a
-     * one-byte sequence. Swallowed whole so shell output (bracketed paste, SGR
-     * colour, cursor moves, OSC title) never reaches the cell grid. */
+    /* ANSI/VT100 escape consumer. P4-c swallowed sequences whole; P5-e parses
+     * CSI and acts: SGR 'm' sets the fg colour, 'H' moves the cursor, 'J' clears
+     * the grid. OSC (ESC ] ... BEL) and ESC + other byte are still swallowed. */
     enum class AnsiState : uint8_t { kNormal, kEsc, kCsi, kOsc };
 
     void put_char_(char ch);
     void newline_();
     void scroll_up_();
+    void dispatch_csi_(char final_byte);  // P5-e: act on a completed CSI (m/H/J)
+    void apply_sgr_();                    // P5-e: parse csi_param_ SGR codes -> cur_fg_
 
-    char         cells_[kMaxCols * kMaxRows] = {};
-    uint32_t     cols_                       = kDefaultCols;
-    uint32_t     rows_                       = kDefaultRows;
-    uint32_t     cur_col_                    = 0;
-    uint32_t     cur_row_                    = 0;
-    const Theme* theme_                      = nullptr;
-    AnsiState    ansi_state_                 = AnsiState::kNormal;
+    char         cells_[kMaxCols * kMaxRows]     = {};
+    uint8_t      fg_colors_[kMaxCols * kMaxRows] = {};  // P5-e: per-cell fg (0-15)
+    uint32_t     cols_                           = kDefaultCols;
+    uint32_t     rows_                           = kDefaultRows;
+    uint32_t     cur_col_                        = 0;
+    uint32_t     cur_row_                        = 0;
+    uint8_t      cur_fg_                         = 7u;  // P5-e: current SGR fg (white)
+    const Theme* theme_                          = nullptr;
+    AnsiState    ansi_state_                     = AnsiState::kNormal;
+    char         csi_param_[16]                  = {};  // P5-e: collected CSI param bytes
+    uint8_t      csi_len_                        = 0u;
 };
 
 }  // namespace cinux::gui

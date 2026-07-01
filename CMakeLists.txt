@@ -149,6 +149,11 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(terminal-test PRIVATE cinux-gui)
     add_test(NAME terminal-test COMMAND terminal-test)
 
+    # P5-e: TerminalWidget ANSI SGR colour + cursor + clear.
+    add_executable(terminal-ansi-test test/test_terminal_ansi.cpp)
+    target_link_libraries(terminal-ansi-test PRIVATE cinux-gui)
+    add_test(NAME terminal-ansi-test COMMAND terminal-ansi-test)
+
     # P4-d: posix_spawn (forkpty) unit test -- host layer, links libutil.
     add_executable(posix-spawn-test test/test_posix_spawn.cpp host/posix_spawn.cpp)
     target_include_directories(posix-spawn-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/host)
