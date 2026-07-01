@@ -22,7 +22,7 @@
 | **P1** | 探针 Probe-1：真 fbdev + evdev（第二个真 host，证明解耦缝） | ✅ 完成：代码 + 单测（4 ctest + ASAN）+ 真 QEMU 冒烟 PASS（自构建 kernel+initramfs，`fb0:bochs-drmdrmfb`+usb-tablet+fbdev-host 跑满 40s 不崩，像素证据）；笔记 `notes/2026-06-30-p1-probe1-fbdev-host.md` |
 | **P2** | 渲染收敛核心：swraster 正式接管，compositor dirty-region（只重画脏区，省 composite 本身） | ✅ 完成（4 批 a/b/c/d）：host-neutral Scene（数据）+ Compositor（全画 + 帧间 dirty diff）收敛三 host 画法；fbdev QEMU 冒烟 PASS + 像素眼检；Host ABI 零改动。笔记 `notes/2026-07-01-p2-*.md` |
 | **P3** | 控件工具箱：Button / Label / Slider / Container + 布局 + 事件路由 | ✅ 完成（4 批 a/b/c/d）：Widget 树 + PaintList + 事件路由 + 圆角/Material flat Theme + Label/Button/Slider/Container/HBox/VBox + press capture; widgets-host demo Material 端到端（ctest + 像素眼检）。fbdev 控件化 + Scene 退役作 follow-up。Host ABI 零改动 |
-| **P4** | 桌面迁入（路 A：Widget 重建）：本仓 P3 控件框架上重建 WM/Window/Terminal 桌面语义；terminal IO 走 PTY fork+exec；CinuxOS **暂不删** `kernel/gui/`（只 pin 新本仓，删码留后续） | 🔄 启动中（5 批 a/b/c/d/e） |
+| **P4** | 桌面迁入（路 A：Widget 重建）：本仓 P3 控件框架上重建 WM/Window/Terminal 桌面语义；terminal IO 走 PTY fork+exec；CinuxOS **暂不删** `kernel/gui/`（只 pin 新本仓，删码留后续） | ✅ 完成（5 批 a/b/c/d/e；ctest 15/15 + ASAN；Host ABI 零改动） |
 | **P5** | 字体/文本（PSF → 更全）、主题 | 待启动 |
 | **P6** | GPU texture compositor（有真 GPU 目标后；非 primitive draw-list） | 远期 |
 | **P7** | 多进程 Surface 协议（attach/damage/commit/release；ring-3 桌面 server） | 远期 |

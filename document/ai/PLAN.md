@@ -98,11 +98,14 @@
 | **P4-b** | `WindowManager`（Z 序栈 / click-to-raise / 标题栏拖动移窗 / 关闭销毁）住 Desktop 上层 + 简单软件 cursor | ✅ | — | wm-test：Z 序 / raise / click-to-raise / close / cursor（6 断言绿） |
 | **P4-c** | `TerminalWidget`（80×25 字符缓冲 + cursor + 换行/滚动 + 渲染到 PaintList），IO 先注桩（不接 shell） | ✅ | — | terminal-test：写字 / cursor / `\n`/`\r`/`\b` / 滚动 / 像素（6 断言绿）；扩 PaintList 4096 + 新 kTextGlyph cmd |
 | **P4-d** | Terminal IO + 首实装 `HostDesktop::spawn`（Linux host forkpty + exec `/bin/sh` + PTY）+ terminal-host 真 shell 交互 | ✅ | — | posix-spawn-test（forkpty + echo）ctest + terminal-host 编译链接（真 shell 眼检留 WSLg） |
-| **P4-e** | fbdev host 切控件树（替 P2 Scene 路径）+ `core/scene.*` / `compose(Scene)` 退役（确认无引用）+ desktop icon constexpr 数据 | 🔜 NEXT | — | fbdev QEMU 真 evdev→WM 全链路冒烟 + Scene 退役零回归 ctest |
+| **P4-e** | fbdev host 切控件树（`linux_fbdev_main` 经 WM+Window+Desktop.render 替 P2 Scene+Compositor）+ Scene **保留**（offscreen/replay 作 P0/P2 回归基线 + P2-c 帧间 diff 脏区纪律验证，控件树 P3-a 全屏 dirty 无此纪律 → 不退役） | ✅ | — | ctest 15/15 零回归 + fbdev-host 编译链接（QEMU 真 evdev→WM 冒烟手动留） |
 
-### Follow-up：fbdev 控件化 + Scene 退役 → 已并入 P4-e
+### Follow-up：Scene 退役 / desktop icon / per-widget dirty（P4 后，迟早做）
 
-（原 P3 follow-up）fbdev host 切控件树 + `core/scene.*` / `compose(Scene)` 退役，已吸收进 **P4-e** 批（见上 P4 批表）。P4 桌面迁入时 fbdev 自然控件化，届时一并清退 P2 Scene。
+- **Scene 退役推迟**：P4-e fbdev 切控件树，但 Scene **保留**（offscreen/replay host + `test_scene`/`test_compositor` 作 P0/P2 回归基线 + 验证 P2-c 帧间 diff 脏区纪律；控件树是 P3-a 全屏 dirty，无等价帧间 diff）。待 per-widget dirty + 帧间 diff 落地后再退役。
+- **desktop icon**：P4-e 暂跳（低价值装饰），留后续。
+- **per-widget dirty + 帧间 diff**：P3-a/P4 全屏 dirty，局部 dirty 留优化批（落地后 Scene 可退役）。
+- **QEMU 真 evdev→WM 冒烟**：fbdev-host widget-tree edition 手动冒烟（`timeout 40 ./fbdev-host`，自构建 kernel+initramfs，VNC 眼检）。控件逻辑已被 window-test/window-manager-test 单测覆盖。
 
 ## 验证哲学
 
