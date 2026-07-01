@@ -109,6 +109,11 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(theme-test PRIVATE cinux-gui)
     add_test(NAME theme-test COMMAND theme-test)
 
+    # P5-a: font scaling (glyph_blit_scaled) + text measurement.
+    add_executable(font-scale-test test/test_font_scale.cpp)
+    target_link_libraries(font-scale-test PRIVATE cinux-gui)
+    add_test(NAME font-scale-test COMMAND font-scale-test)
+
     # P3-c: basic widgets (Label/Button/Container) + HBox/VBox layout.
     add_executable(widgets-test test/test_widgets.cpp)
     target_link_libraries(widgets-test PRIVATE cinux-gui)

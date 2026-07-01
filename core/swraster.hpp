@@ -110,6 +110,16 @@ void glyph_blit(Surface& s, int32_t x, int32_t y, const uint8_t* bits, uint32_t 
                 uint32_t color, const ClipRect* clip);
 
 /**
+ * @brief Scaled 1-bpp alpha-mask -> solid colour blit (P5-a: integer font scale)
+ *
+ * Like glyph_blit but each set bit becomes a scale×scale block (nearest
+ * neighbour, via fill_rect). scale==1 reproduces glyph_blit. Lets the bundled
+ * 8x16 PSF render as 16x32 / 24x48 for larger UI text without new font data.
+ */
+void glyph_blit_scaled(Surface& s, int32_t x, int32_t y, const uint8_t* bits, uint32_t gw,
+                       uint32_t gh, uint32_t scale, uint32_t color, const ClipRect* clip);
+
+/**
  * @brief Bresenham line (generalises Canvas::draw_line), per-point clipped
  */
 void draw_line(Surface& s, int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t color,

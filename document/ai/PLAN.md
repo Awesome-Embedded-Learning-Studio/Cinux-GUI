@@ -107,6 +107,18 @@
 - **per-widget dirty + 帧间 diff**：P3-a/P4 全屏 dirty，局部 dirty 留优化批（落地后 Scene 可退役）。
 - **QEMU 真 evdev→WM 冒烟**：fbdev-host widget-tree edition 手动冒烟（`timeout 40 ./fbdev-host`，自构建 kernel+initramfs，VNC 眼检）。控件逻辑已被 window-test/window-manager-test 单测覆盖。
 
+## 批表（P5 增强 · 字体/主题/dirty/flex/ANSI）🔄
+
+> 决策点（用户拍板"四个方向全做"）：P5 覆盖字体/文本、主题、per-widget dirty、flex/per-corner 圆角、终端 ANSI 彩色。5 批 a-e，逐批定细节 + 实现。**Host ABI 目标零改动**（纯 core/控件层增强，CinuxOS 不 bump pin）。
+
+| 批 | 范围 | 状态 | commit | 测试 |
+|---|---|---|---|---|
+| **P5-a** | 字体增强：swraster 整数缩放渲染（glyph_blit_scaled）+ 文本测量（text_width/height）+ Label set_scale（PSF 8×16 → 16×32，无新字体数据） | ✅ | — | font-scale-test（scale 2 = 4× pixel + 测量 + execute 一致） |
+| **P5-b** | 主题运行时切换（set_theme 重渲染 light/dark）+ 配色变体（surface_variant 等）+ sdl-host 按键切换 demo | 🔜 NEXT | — | theme-test 扩展 + 眼检 |
+| **P5-c** | per-widget dirty（invalidate flag）+ Desktop.render 局部 dirty（只 composite 脏控件区）+ 帧间 diff（省 composite/flush） | 🔜 | — | dirty-test（局部 rect + idle 0 flush） |
+| **P5-d** | HBox/VBox flex 权重（set_flex）+ swraster per-corner 圆角（Window 四角圆 + 标题栏可真 HBox） | 🔜 | — | flex-test + per-corner 圆角像素 |
+| **P5-e** | 终端 ANSI 彩色渲染（SGR 16 色 fg/bg + 光标定位/清屏执行，TerminalWidget cells 加 color 属性） | 🔜 | — | terminal-ansi-test（颜色/光标/清屏） |
+
 ## 验证哲学
 
 - **能确定的，全部自动化进本仓 ctest**：渲染对不对 = 金帧对比；脏区对不对 = 断言 `flush` 了哪些 rect；崩不崩 / ASAN / UBSAN = 自动。

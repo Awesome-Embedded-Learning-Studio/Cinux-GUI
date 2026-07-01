@@ -3,15 +3,14 @@
  * @brief cinux::gui PaintList -- ordered draw cmds (widget tree -> Compositor)
  *
  * P3's scene source. Each frame the widget tree flattens into a PaintList
- * (fill_rect / fill_round_rect / text / text_glyph / clip push-pop); execute()
- * walks it and paints into the staging Surface. This REPLACES P2's Scene as the
- * scene source -- a widget tree produces a richer list than a fixed Scene.
+ * (fill_rect / fill_round_rect / text / text_glyph / text_scaled / clip
+ * push-pop); execute() walks it and paints into the staging Surface.
  *
- * Two text cmds: `text` (NUL-terminated const char*, borrowed for the frame --
- * the owning widget keeps its buffer alive until execute()) and `text_glyph`
- * (a single char inlined in the cmd, no borrowing). text_glyph is for
- * char-dense widgets like a terminal, whose per-cell characters cannot each
- * borrow a stable buffer.
+ * Three text cmds:
+ *   - text       (NUL-terminated const char*, borrowed for the frame)
+ *   - text_glyph (a single char inlined in the cmd, no borrowing -- terminals)
+ *   - text_scaled (P5-a: a NUL-terminated string drawn at integer 2x/3x via
+ *     swraster::glyph_blit_scaled; borrowed like text)
  *
  * Fixed-capacity (no <vector>): overflow drops cmds (kMaxCmds is sized for a
  * full 80x25 terminal plus the rest of the tree; raise if ever hit).
@@ -27,14 +26,13 @@
 
 namespace cinux::gui {
 
-/* Draw-command kinds. kFillRoundRect executes the fill_rounded_rect swraster
- * primitive; kText renders a NUL-terminated string; kTextGlyph renders one
- * inlined character (no borrowed pointer). */
+/* Draw-command kinds. */
 enum class CmdKind : uint8_t {
     kFillRect,
     kFillRoundRect,
     kText,
     kTextGlyph,
+    kTextScaled,  // P5-a: scaled string (integer font scaling)
     kClipPush,
     kClipPop,
 };
@@ -72,6 +70,15 @@ struct TextGlyphCmd {
     char     ch;
 };
 
+/* P5-a: a NUL-terminated string drawn at integer @p scale (borrowed pointer). */
+struct TextScaledCmd {
+    int32_t     x;
+    int32_t     y;
+    uint32_t    color;
+    uint32_t    scale;
+    const char* text;
+};
+
 struct ClipPushCmd {
     int32_t x0;
     int32_t y0;
@@ -87,6 +94,7 @@ struct PaintCmd {
         FillRoundRectCmd rfill;
         TextCmd          text;
         TextGlyphCmd     glyph;
+        TextScaledCmd    scaled;
         ClipPushCmd      clip;
     };
 };
@@ -115,6 +123,8 @@ public:
     void text(int32_t x, int32_t y, uint32_t color, const char* str);
     /** Inlined single-char draw (no borrowed pointer) -- for char-dense widgets. */
     void text_glyph(int32_t x, int32_t y, uint32_t color, char ch);
+    /** NUL-terminated string drawn at integer @p scale (borrowed pointer). P5-a. */
+    void text_scaled(int32_t x, int32_t y, uint32_t color, const char* str, uint32_t scale);
     void clip_push(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
     void clip_pop();
 

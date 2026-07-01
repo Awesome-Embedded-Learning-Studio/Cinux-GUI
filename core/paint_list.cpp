@@ -52,6 +52,15 @@ void PaintList::text_glyph(int32_t x, int32_t y, uint32_t color, char ch) {
     c.glyph     = {x, y, color, ch};
 }
 
+void PaintList::text_scaled(int32_t x, int32_t y, uint32_t color, const char* str, uint32_t scale) {
+    if (count_ >= kMaxCmds || str == nullptr) {
+        return;
+    }
+    PaintCmd& c = cmds_[count_++];
+    c.kind      = CmdKind::kTextScaled;
+    c.scaled    = {x, y, color, scale, str};
+}
+
 void PaintList::clip_push(int32_t x0, int32_t y0, int32_t x1, int32_t y1) {
     if (count_ >= kMaxCmds) {
         return;

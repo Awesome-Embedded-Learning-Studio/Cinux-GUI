@@ -55,6 +55,27 @@ void draw_text(Surface& s, const PsfFont& font, const char* str, int32_t x, int3
     }
 }
 
+/* Like draw_text but each glyph is glyph_blit_scaled at @p scale (P5-a). '\n'
+ * wraps to the next row (one font.height() * scale). nullptr/empty is a no-op. */
+void draw_text_scaled(Surface& s, const PsfFont& font, const char* str, int32_t x, int32_t y,
+                      uint32_t color, uint32_t scale, const ClipRect* clip) {
+    if (str == nullptr) {
+        return;
+    }
+    int32_t cx = x;
+    int32_t cy = y;
+    for (const char* p = str; *p != '\0'; p++) {
+        if (*p == '\n') {
+            cx = x;
+            cy += static_cast<int32_t>(font.height() * scale);
+            continue;
+        }
+        glyph_blit_scaled(s, cx, cy, font.glyph(static_cast<uint8_t>(*p)), font.width(),
+                          font.height(), scale, color, clip);
+        cx += static_cast<int32_t>(font.width() * scale);
+    }
+}
+
 /* Paint one window: face fill -> titlebar band -> edge outline -> title text
  * -> body text. The order and text positions are exactly what the three hosts
  * used, so output is pixel-identical to the old hand-written paint. @p clip
@@ -202,6 +223,10 @@ void execute(Surface& staging, const PaintList& list, const PsfFont& font) {
                 }
                 break;
             }
+            case CmdKind::kTextScaled:
+                draw_text_scaled(staging, font, c.scaled.text, c.scaled.x, c.scaled.y,
+                                 c.scaled.color, c.scaled.scale, cur());
+                break;
             case CmdKind::kClipPush: {
                 if (top + 1 < static_cast<int32_t>(kMaxClip)) {
                     ClipRect pushed{c.clip.x0, c.clip.y0, c.clip.x1, c.clip.y1};

@@ -62,4 +62,10 @@ private:
     uint32_t       height_          = 0;
 };
 
+/** Width of @p str rendered at integer @p scale (longest line; 0 if !ready/null). P5-a. */
+uint32_t text_width(const PsfFont& f, const char* str, uint32_t scale);
+
+/** Height of @p str at @p scale (line count * font.height() * scale). P5-a. */
+uint32_t text_height(const PsfFont& f, const char* str, uint32_t scale);
+
 }  // namespace cinux::gui

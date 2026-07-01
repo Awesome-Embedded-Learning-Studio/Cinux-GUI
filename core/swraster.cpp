@@ -281,6 +281,25 @@ void glyph_blit(Surface& s, int32_t x, int32_t y, const uint8_t* bits, uint32_t 
     }
 }
 
+void glyph_blit_scaled(Surface& s, int32_t x, int32_t y, const uint8_t* bits, uint32_t gw,
+                       uint32_t gh, uint32_t scale, uint32_t color, const ClipRect* clip) {
+    if (s.format != PixelFormat::kXrgb8888 || bits == nullptr || scale == 0u) {
+        return;
+    }
+    /* Same bit layout as glyph_blit (MSB-first, (gw+7)/8 bytes per row); each
+     * set bit paints a scale×scale block via fill_rect (which clips). */
+    const uint32_t bytes_per_row = (gw + 7u) / 8u;
+    for (uint32_t row = 0u; row < gh; ++row) {
+        for (uint32_t col = 0u; col < gw; ++col) {
+            const uint8_t byte = bits[row * bytes_per_row + col / 8u];
+            if (((byte >> (7u - (col % 8u))) & 1u) != 0u) {
+                fill_rect(s, x + static_cast<int32_t>(col * scale),
+                          y + static_cast<int32_t>(row * scale), scale, scale, color, clip);
+            }
+        }
+    }
+}
+
 void draw_line(Surface& s, int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t color,
                const ClipRect* clip) {
     if (s.format != PixelFormat::kXrgb8888) {
