@@ -27,4 +27,9 @@ namespace cinux::gui {
 bool write_ppm(const char* path, uint32_t width, uint32_t height, const void* pixels,
                uint32_t stride_bytes);
 
+/** Same pixels -> 24-bit BMP (BGR, bottom-up). Viewable in IDEs that preview
+ * BMP but not PPM (e.g. VSCode). Returns true on success. */
+bool write_bmp(const char* path, uint32_t width, uint32_t height, const void* pixels,
+               uint32_t stride_bytes);
+
 }  // namespace cinux::gui

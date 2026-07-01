@@ -182,8 +182,14 @@ int main() {
         std::printf("write_ppm(%s) failed\n", path);
         return 1;
     }
+    /* Also write a BMP -- some viewers/IDEs preview BMP but not PPM. Same pixels
+     * as the PPM, so it is an identical visual baseline for cross-host checks. */
+    if (!write_bmp("gallery.bmp", kW, kH, buf, staging.stride_bytes)) {
+        std::printf("write_bmp failed\n");
+        return 1;
+    }
     std::printf(
-        "gallery-dump: OK -> %s (%ux%u: "
+        "gallery-dump: OK -> %s + gallery.bmp (%ux%u: "
         "Label/Button/Slider/TextBox/CheckBox/Radio/Dropdown/Window)\n",
         path, kW, kH);
     delete[] buf;
