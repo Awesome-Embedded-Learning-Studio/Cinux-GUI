@@ -56,8 +56,10 @@ public:
     uint32_t rows() const { return rows_; }
     /** Cell at (col,row); 0 if empty or out of the configured grid. */
     char cell_at(uint32_t col, uint32_t row) const;
-    /** Foreground colour index (0-15) of the cell at (col,row). P5-e. */
+    /** Foreground colour index (0-255) of the cell at (col,row). P5-e/P6-c. */
     uint8_t fg_at(uint32_t col, uint32_t row) const;
+    /** Background colour index (0-255) of the cell at (col,row). P6-c. */
+    uint8_t bg_at(uint32_t col, uint32_t row) const;
 
 protected:
     void paint_to_list(PaintList& list) const override;
@@ -77,14 +79,16 @@ private:
     void apply_sgr_();                    // P5-e: parse csi_param_ SGR codes -> cur_fg_
 
     char         cells_[kMaxCols * kMaxRows]     = {};
-    uint8_t      fg_colors_[kMaxCols * kMaxRows] = {};     // P5-e: per-cell fg (0-15)
+    uint8_t      fg_colors_[kMaxCols * kMaxRows] = {};     // P5-e/P6-c: per-cell fg (0-255)
+    uint8_t      bg_colors_[kMaxCols * kMaxRows] = {};     // P6-c: per-cell bg (0-255)
     bool         dirty_rows_[kMaxRows]           = {};     // P5-f: per-row dirty
     bool         dirty_all_                      = false;  // P5-f: whole-grid dirty
     uint32_t     cols_                           = kDefaultCols;
     uint32_t     rows_                           = kDefaultRows;
     uint32_t     cur_col_                        = 0;
     uint32_t     cur_row_                        = 0;
-    uint8_t      cur_fg_                         = 7u;  // P5-e: current SGR fg (white)
+    uint8_t      cur_fg_                         = 7u;  // current SGR fg (white)
+    uint8_t      cur_bg_                         = 0u;  // P6-c: current SGR bg (black)
     const Theme* theme_                          = nullptr;
     AnsiState    ansi_state_                     = AnsiState::kNormal;
     char         csi_param_[16]                  = {};  // P5-e: collected CSI param bytes

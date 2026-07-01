@@ -20,6 +20,24 @@ const uint32_t kAnsiPalette[16] = {
     0x00808080u, 0x00FF0000u, 0x0000FF00u, 0x00FFFF00u,  // bright black/red/green/yellow
     0x000000FFu, 0x00FF00FFu, 0x0000FFFFu, 0x00FFFFFFu,  // bright blue/magenta/cyan/white
 };
+
+/* P6-c: 256-colour palette lookup (XRGB8888). 0-15 = the 16 above; 16-231 a
+ * 6x6x6 colour cube (each channel 0 or 55+40*v); 232-255 a 24-step grayscale. */
+uint32_t palette_color(uint8_t idx) {
+    if (idx < 16u) {
+        return kAnsiPalette[idx];
+    }
+    if (idx < 232u) {
+        const uint32_t c    = idx - 16u;
+        const auto     chan = [](uint32_t v) { return v == 0u ? 0u : (55u + 40u * v); };
+        const uint32_t r    = chan(c / 36u);
+        const uint32_t g    = chan((c / 6u) % 6u);
+        const uint32_t b    = chan(c % 6u);
+        return (r << 16) | (g << 8) | b;
+    }
+    const uint32_t v = 8u + (static_cast<uint32_t>(idx) - 232u) * 10u;
+    return (v << 16) | (v << 8) | v;
+}
 }  // namespace
 
 void TerminalWidget::set_cols_rows(uint32_t cols, uint32_t rows) {
@@ -55,6 +73,13 @@ uint8_t TerminalWidget::fg_at(uint32_t col, uint32_t row) const {
     return fg_colors_[row * kMaxCols + col];  // P5-e
 }
 
+uint8_t TerminalWidget::bg_at(uint32_t col, uint32_t row) const {  // P6-c
+    if (col >= kMaxCols || row >= kMaxRows) {
+        return 0u;
+    }
+    return bg_colors_[row * kMaxCols + col];
+}
+
 void TerminalWidget::scroll_up_() {
     for (uint32_t r = 1; r < rows_; ++r) {
         for (uint32_t c = 0; c < kMaxCols; ++c) {
@@ -62,11 +87,13 @@ void TerminalWidget::scroll_up_() {
             const uint32_t dst = (r - 1) * kMaxCols + c;
             cells_[dst]        = cells_[src];
             fg_colors_[dst]    = fg_colors_[src];  // P5-e: colour scrolls with the char
+            bg_colors_[dst]    = bg_colors_[src];  // P6-c: bg scrolls too
         }
     }
     for (uint32_t c = 0; c < kMaxCols; ++c) {
         cells_[(rows_ - 1) * kMaxCols + c]     = 0;
         fg_colors_[(rows_ - 1) * kMaxCols + c] = 0;
+        bg_colors_[(rows_ - 1) * kMaxCols + c] = 0;
     }
     dirty_all_  = true;  // P5-f: a scroll repaints the whole grid
     dirty_self_ = true;
@@ -82,31 +109,49 @@ void TerminalWidget::newline_() {
 }
 
 void TerminalWidget::apply_sgr_() {
-    /* Parse ;-separated decimal codes from csi_param_ (empty param = 0 = reset). */
-    uint32_t   code  = 0;
-    bool       has   = false;
-    const auto apply = [this](uint32_t c) {
+    /* P6-c: parse csi_param_ into a codes[] array so multi-code sequences
+     * (38;5;N / 48;5;N) can peek ahead. Empty param = 0 = reset. */
+    uint32_t codes[16];
+    uint32_t ncode = 0;
+    uint32_t cur   = 0;
+    bool     has   = false;
+    for (uint8_t i = 0; i < csi_len_ && ncode < 16u; ++i) {
+        const char b = csi_param_[i];
+        if (b >= '0' && b <= '9') {
+            cur = cur * 10u + static_cast<uint32_t>(b - '0');
+            has = true;
+        } else if (b == ';') {
+            codes[ncode++] = has ? cur : 0u;
+            cur            = 0;
+            has            = false;
+        }
+    }
+    codes[ncode++] = has ? cur : 0u;  // last (or lone 0 when empty)
+
+    for (uint32_t i = 0u; i < ncode; ++i) {
+        const uint32_t c = codes[i];
         if (c == 0u || c == 39u) {
-            cur_fg_ = 7u;  // reset / default fg = white
+            cur_fg_ = 7u;
+            cur_bg_ = 0u;  // reset / default fg + bg
+        } else if (c == 49u) {
+            cur_bg_ = 0u;  // default bg
         } else if (c >= 30u && c <= 37u) {
             cur_fg_ = static_cast<uint8_t>(c - 30u);
         } else if (c >= 90u && c <= 97u) {
-            cur_fg_ = static_cast<uint8_t>(c - 90u + 8u);  // bright
+            cur_fg_ = static_cast<uint8_t>(c - 90u + 8u);  // bright fg
+        } else if (c >= 40u && c <= 47u) {
+            cur_bg_ = static_cast<uint8_t>(c - 40u);  // P6-c: bg
+        } else if (c >= 100u && c <= 107u) {
+            cur_bg_ = static_cast<uint8_t>(c - 100u + 8u);  // bright bg
+        } else if (c == 38u && i + 2u < ncode && codes[i + 1u] == 5u) {
+            cur_fg_ = static_cast<uint8_t>(codes[i + 2u]);  // 256-colour fg
+            i += 2u;
+        } else if (c == 48u && i + 2u < ncode && codes[i + 1u] == 5u) {
+            cur_bg_ = static_cast<uint8_t>(codes[i + 2u]);  // 256-colour bg
+            i += 2u;
         }
-        // bold(1) / bg(40-47) / etc. ignored for now
-    };
-    for (uint8_t i = 0; i < csi_len_; ++i) {
-        const char b = csi_param_[i];
-        if (b >= '0' && b <= '9') {
-            code = code * 10u + static_cast<uint32_t>(b - '0');
-            has  = true;
-        } else if (b == ';') {
-            apply(has ? code : 0u);
-            code = 0;
-            has  = false;
-        }
+        // bold(1) / 38;2;r;g;b truecolour / etc. ignored
     }
-    apply(has ? code : 0u);
 }
 
 void TerminalWidget::dispatch_csi_(char final_byte) {
@@ -225,6 +270,7 @@ void TerminalWidget::put_char_(char ch) {
                 const uint32_t idx    = cur_row_ * kMaxCols + cur_col_;
                 cells_[idx]           = 0;
                 fg_colors_[idx]       = 0;
+                bg_colors_[idx]       = 0;
                 dirty_rows_[cur_row_] = true;
                 dirty_self_           = true;
             }
@@ -244,6 +290,7 @@ void TerminalWidget::put_char_(char ch) {
     const uint32_t idx    = cur_row_ * kMaxCols + cur_col_;
     cells_[idx]           = ch;
     fg_colors_[idx]       = cur_fg_;  // P5-e: stamp the current SGR fg on this cell
+    bg_colors_[idx]       = cur_bg_;  // P6-c: stamp the current SGR bg
     dirty_rows_[cur_row_] = true;     // P5-f: this row changed
     dirty_self_           = true;
     ++cur_col_;
@@ -301,20 +348,32 @@ void TerminalWidget::clear_dirty() {
 }
 
 void TerminalWidget::paint_to_list(PaintList& list) const {
-    const uint32_t bg = (theme_ != nullptr) ? theme_->surface : 0x00000000u;  // black
+    const uint32_t defbg = (theme_ != nullptr) ? theme_->surface : 0x00000000u;  // black
 
-    list.fill_rect(rect_.x0, rect_.y0, rect_.width(), rect_.height(), bg);
+    list.fill_rect(rect_.x0, rect_.y0, rect_.width(), rect_.height(), defbg);
     for (uint32_t r = 0; r < rows_; ++r) {
         for (uint32_t c = 0; c < cols_; ++c) {
             const uint32_t idx = r * kMaxCols + c;
-            const char     ch  = cells_[idx];
+            const uint8_t  bgi = bg_colors_[idx];  // P6-c: per-cell bg
+            if (bgi != 0u) {                       // non-default bg
+                list.fill_rect(rect_.x0 + static_cast<int32_t>(c * kGlyphW),
+                               rect_.y0 + static_cast<int32_t>(r * kGlyphH), kGlyphW, kGlyphH,
+                               palette_color(bgi));
+            }
+            const char ch = cells_[idx];
             if (ch == 0) {
                 continue;  // empty cell
             }
-            const uint32_t cfg = kAnsiPalette[fg_colors_[idx] & 0xFu];  // P5-e: per-cell colour
+            const uint32_t cfg = palette_color(fg_colors_[idx]);  // P6-c: 256-colour fg
             list.text_glyph(rect_.x0 + static_cast<int32_t>(c * kGlyphW),
                             rect_.y0 + static_cast<int32_t>(r * kGlyphH), cfg, ch);
         }
+    }
+    /* P6-c: cursor block at (cur_col, cur_row) -- a solid white square. */
+    if (cur_col_ < cols_ && cur_row_ < rows_) {
+        list.fill_rect(rect_.x0 + static_cast<int32_t>(cur_col_ * kGlyphW),
+                       rect_.y0 + static_cast<int32_t>(cur_row_ * kGlyphH), kGlyphW, kGlyphH,
+                       0x00FFFFFFu);
     }
 }
 

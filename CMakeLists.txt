@@ -130,6 +130,11 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(resize-test PRIVATE cinux-gui)
     add_test(NAME resize-test COMMAND resize-test)
 
+    # P6-c: terminal ANSI bg + 256 colour + cursor block.
+    add_executable(terminal-bg256-test test/test_terminal_bg256.cpp)
+    target_link_libraries(terminal-bg256-test PRIVATE cinux-gui)
+    add_test(NAME terminal-bg256-test COMMAND terminal-bg256-test)
+
     # P5-c: per-widget dirty + Desktop::render idle skip.
     add_executable(dirty-test test/test_dirty.cpp)
     target_link_libraries(dirty-test PRIVATE cinux-gui)
