@@ -87,6 +87,17 @@ int main() {
         CHECK(px[13 * kW + 13] == 0x00FF0000u, "tiny rounded centre red");
     }
 
-    std::printf("theme-test: OK (palette/rounded-corners/radius0/clamp)\n");
+    // 6. P5-b: container / variant colours are set and differ light vs dark
+    {
+        Theme tl = material_light();
+        Theme td = material_dark();
+        CHECK(tl.primary_container != 0u, "light primary_container set");
+        CHECK(tl.on_primary_container != tl.primary_container, "container has contrast");
+        CHECK(tl.surface_variant != tl.surface, "light surface_variant != surface");
+        CHECK(td.primary_container != tl.primary_container, "light/dark container differ");
+        CHECK(td.surface_variant != tl.surface_variant, "light/dark surface_variant differ");
+    }
+
+    std::printf("theme-test: OK (palette/rounded-corners/radius0/clamp/variants)\n");
     return 0;
 }

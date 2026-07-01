@@ -71,7 +71,8 @@ int main() {
         std::printf("font init failed\n");
         return 1;
     }
-    Theme t = material_light();
+    Theme t    = material_light();
+    bool  dark = false;  // P5-b: toggle light/dark at runtime (press T)
 
     VBox root;
     root.set_rect(0, 0, kW, kH);
@@ -161,6 +162,19 @@ int main() {
                 p.y       = e.button.y;
                 p.buttons = 0u;
                 desktop.dispatch_pointer(p);
+            } else if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_t) {
+                // P5-b: runtime light/dark toggle; Desktop::render repaints next frame.
+                dark = !dark;
+                t    = dark ? material_dark() : material_light();
+                title.set_color(t.on_surface);
+                vol_label.set_color(t.on_surface);
+                bnew.set_theme(&t);
+                bopen.set_theme(&t);
+                bsave.set_theme(&t);
+                vol.set_theme(&t);
+                ok.set_theme(&t);
+                cancel.set_theme(&t);
+                root.set_bg(t.background);
             }
         }
 
