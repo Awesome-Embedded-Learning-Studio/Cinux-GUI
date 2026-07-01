@@ -38,6 +38,7 @@ add_library(cinux-gui STATIC
     core/font.cpp
     core/gui_core.cpp
     core/region.cpp
+    core/scene.cpp
     core/swraster.cpp
     core/abi_check.cpp
 )
@@ -75,6 +76,11 @@ if(CINUX_GUI_STANDALONE)
     target_include_directories(evdev-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/host)
     target_link_libraries(evdev-test PRIVATE cinux-gui)
     add_test(NAME evdev-test COMMAND evdev-test)
+
+    # P2-a: Scene data-model unit test (pure POD geometry/capacity/text).
+    add_executable(scene-test test/test_scene.cpp)
+    target_link_libraries(scene-test PRIVATE cinux-gui)
+    add_test(NAME scene-test COMMAND scene-test)
 
     # P1 Probe-1: real Linux fbdev+evdev host. Manual smoke under QEMU only
     # (needs /dev/fb0 + /dev/input/event*); NOT a ctest.
