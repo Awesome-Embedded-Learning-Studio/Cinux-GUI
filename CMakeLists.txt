@@ -35,6 +35,7 @@ endif()
 # host-neutral core library (built in BOTH contexts)
 # ============================================================
 add_library(cinux-gui STATIC
+    core/compositor.cpp
     core/font.cpp
     core/gui_core.cpp
     core/region.cpp
@@ -81,6 +82,12 @@ if(CINUX_GUI_STANDALONE)
     add_executable(scene-test test/test_scene.cpp)
     target_link_libraries(scene-test PRIVATE cinux-gui)
     add_test(NAME scene-test COMMAND scene-test)
+
+    # P2-b: Compositor unit test (Scene -> pixels via swraster, zero-regression
+    # against the offscreen host's hand-written paint).
+    add_executable(compositor-test test/test_compositor.cpp)
+    target_link_libraries(compositor-test PRIVATE cinux-gui)
+    add_test(NAME compositor-test COMMAND compositor-test)
 
     # P1 Probe-1: real Linux fbdev+evdev host. Manual smoke under QEMU only
     # (needs /dev/fb0 + /dev/input/event*); NOT a ctest.

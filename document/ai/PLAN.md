@@ -71,8 +71,8 @@
 | 批 | 范围 | 状态 | commit | 测试 |
 |---|---|---|---|---|
 | **P2-a** | Scene 数据模型（`core/scene.*`：Window 栈 + Cursor + 文本 run，纯 POD，零 swraster/host include） | ✅ | — | 新 `test_scene.cpp`：构造/几何/截断/容量断言绿 + ASAN |
-| **P2-b** | Compositor 接管绘制（`core/compositor.*`：`compose(staging, scene)`，收敛三 host 重复 paint） | 🔜 NEXT | — | 新 `test_compositor.cpp`：像素结构 == 旧 offscreen（零回归） |
-| **P2-c** | 帧间 dirty diff（Compositor 持 prev Scene，只 composite 变化区，返回 dirty Region） | ⏳ | — | replay 脚本：首帧全屏 / 后续局部 / idle 0 |
+| **P2-b** | Compositor 接管绘制（`core/compositor.*`：`compose(staging, scene)`，收敛三 host 重复 paint） | ✅ | — | 新 `test_compositor.cpp`：像素结构 == 旧 offscreen（零回归） |
+| **P2-c** | 帧间 dirty diff（Compositor 持 prev Scene，只 composite 变化区，返回 dirty Region） | 🔜 NEXT | — | replay 脚本：首帧全屏 / 后续局部 / idle 0 |
 | **P2-d** | 三 host 切 Compositor + fbdev QEMU 冒烟验无回归 | ⏳ | — | ctest 全绿 + ASAN + QEMU 冒烟 PASS（手动） |
 
 ## 验证哲学
