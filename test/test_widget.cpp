@@ -88,16 +88,22 @@ int main() {
         CHECK(parent.hit_test(50, 50) == &parent, "hidden child should be skipped");
     }
 
-    // 2. dispatch delivers to the hit widget; a miss delivers nothing
+    // 2. dispatch + press capture (P3-d): down delivers + captures; a captured
+    //    move delivers even outside the widget; up delivers + releases; a
+    //    post-up move (no capture) is ignored
     {
         BoxWidget w(0);
         w.set_rect(0, 0, 100, 100);
         Desktop d;
         d.set_root(&w);
         d.dispatch_pointer(pp(kPointerKindDown, 50, 50));
-        CHECK(w.pointer_calls == 1, "hit should deliver, calls=%d", w.pointer_calls);
-        d.dispatch_pointer(pp(kPointerKindMove, 200, 200));
-        CHECK(w.pointer_calls == 1, "miss should not deliver, calls=%d", w.pointer_calls);
+        CHECK(w.pointer_calls == 1, "down delivers, calls=%d", w.pointer_calls);
+        d.dispatch_pointer(pp(kPointerKindMove, 200, 200));  // outside, but captured
+        CHECK(w.pointer_calls == 2, "captured move delivers, calls=%d", w.pointer_calls);
+        d.dispatch_pointer(pp(kPointerKindUp, 50, 50));
+        CHECK(w.pointer_calls == 3, "up delivers, calls=%d", w.pointer_calls);
+        d.dispatch_pointer(pp(kPointerKindMove, 50, 50));  // no capture now
+        CHECK(w.pointer_calls == 3, "post-up move ignored, calls=%d", w.pointer_calls);
     }
 
     // 3. flatten -> execute paints root + child (child on top)

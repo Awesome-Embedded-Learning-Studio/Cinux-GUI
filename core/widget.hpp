@@ -118,7 +118,8 @@ public:
     void render(Surface& staging, const PsfFont& font, Region* dirty);
 
 private:
-    Widget* root_ = nullptr;
+    Widget* root_         = nullptr;
+    Widget* press_target_ = nullptr;  // P3-d: press capture (drag tracks the press widget)
 };
 
 }  // namespace cinux::gui

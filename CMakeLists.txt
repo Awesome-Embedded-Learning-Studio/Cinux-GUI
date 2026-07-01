@@ -47,6 +47,7 @@ add_library(cinux-gui STATIC
     core/widget/button.cpp
     core/widget/container.cpp
     core/widget/label.cpp
+    core/widget/slider.cpp
     core/abi_check.cpp
 )
 # core/ is PUBLIC so consumers (a host adapter, the harness) resolve the bare
@@ -109,6 +110,11 @@ if(CINUX_GUI_STANDALONE)
     add_executable(widgets-test test/test_widgets.cpp)
     target_link_libraries(widgets-test PRIVATE cinux-gui)
     add_test(NAME widgets-test COMMAND widgets-test)
+
+    # P3-d: Slider widget (drag-to-value + press capture).
+    add_executable(slider-test test/test_slider.cpp)
+    target_link_libraries(slider-test PRIVATE cinux-gui)
+    add_test(NAME slider-test COMMAND slider-test)
 
     # P1 Probe-1: real Linux fbdev+evdev host. Manual smoke under QEMU only
     # (needs /dev/fb0 + /dev/input/event*); NOT a ctest.

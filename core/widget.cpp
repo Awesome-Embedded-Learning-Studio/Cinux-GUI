@@ -58,9 +58,24 @@ void Desktop::dispatch_pointer(const PointerPayload& p) {
     if (root_ == nullptr) {
         return;
     }
-    if (Widget* hit = root_->hit_test(p.x, p.y); hit != nullptr) {
-        hit->on_pointer(p);  // no bubbling -- P3 decision C
+    if (p.kind == kPointerKindDown) {
+        /* Press capture: the widget that got the down keeps receiving move/up,
+         * so a drag stays tracked even when the pointer leaves it (Slider). */
+        press_target_ = root_->hit_test(p.x, p.y);
+        if (press_target_ != nullptr) {
+            press_target_->on_pointer(p);
+        }
+    } else if (p.kind == kPointerKindUp) {
+        if (press_target_ != nullptr) {
+            press_target_->on_pointer(p);
+        }
+        press_target_ = nullptr;  // release capture
+    } else if (press_target_ != nullptr) {
+        /* Move while pressed: deliver to the capture target (not re-hit-tested,
+         * so dragging off the thumb still moves it). */
+        press_target_->on_pointer(p);
     }
+    /* Move with no press_target is ignored -- P3 has no hover. */
 }
 
 void Desktop::render(Surface& staging, const PsfFont& font, Region* dirty) {
@@ -72,6 +87,7 @@ void Desktop::render(Surface& staging, const PsfFont& font, Region* dirty) {
     if (root_ == nullptr) {
         return;
     }
+    root_->layout();  // position children within their parent's rect
     PaintList list;
     root_->flatten(list);
     execute(staging, list, font);
