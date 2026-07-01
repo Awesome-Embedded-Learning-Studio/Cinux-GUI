@@ -40,7 +40,6 @@ add_library(cinux-gui STATIC
     core/gui_core.cpp
     core/paint_list.cpp
     core/region.cpp
-    core/scene.cpp
     core/swraster.cpp
     core/theme.cpp
     core/widget.cpp
@@ -72,36 +71,18 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(cinux-gui-smoke PRIVATE cinux-gui)
     add_test(NAME cinux-gui-smoke COMMAND cinux-gui-smoke)
 
-    # Offscreen host: paints a static scene + dumps one PPM frame (P0-b2). The
-    # first "you can see it" probe of the render pipeline.
-    add_executable(offscreen-dump host/offscreen_host_main.cpp host/ppm_writer.cpp)
-    target_link_libraries(offscreen-dump PRIVATE cinux-gui)
-    add_test(NAME offscreen-dump COMMAND offscreen-dump)
-
-    # Replay host: scripted pointer events drive a draggable scene, asserts
-    # end-state geometry + dirty-region discipline (P0-b3).
-    add_executable(replay-dump host/replay_host_main.cpp host/ppm_writer.cpp)
-    target_link_libraries(replay-dump PRIVATE cinux-gui)
-    add_test(NAME replay-dump COMMAND replay-dump)
-
+    # P6-d: offscreen/replay-dump RETIRED (Scene gone; widgets-dump + fbdev-host
+    # + window-test/window-manager-test/dirty-test cover the widget-tree path).
     # P1 Probe-1: evdev accumulator unit test (pure logic, no device). IS a ctest.
     add_executable(evdev-test test/test_evdev.cpp host/evdev_device.cpp)
     target_include_directories(evdev-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/host)
     target_link_libraries(evdev-test PRIVATE cinux-gui)
     add_test(NAME evdev-test COMMAND evdev-test)
 
-    # P2-a: Scene data-model unit test (pure POD geometry/capacity/text).
-    add_executable(scene-test test/test_scene.cpp)
-    target_link_libraries(scene-test PRIVATE cinux-gui)
-    add_test(NAME scene-test COMMAND scene-test)
+    # P2-b: Compositor unit test RETIRED in P6-d (Scene gone; execute() is now
+    # widget-tree only, covered by widget-test / widgets-test / window-test etc).
 
-    # P2-b: Compositor unit test (Scene -> pixels via swraster, zero-regression
-    # against the offscreen host's hand-written paint).
-    add_executable(compositor-test test/test_compositor.cpp)
-    target_link_libraries(compositor-test PRIVATE cinux-gui)
-    add_test(NAME compositor-test COMMAND compositor-test)
-
-    # P3-a: widget tree unit test (hit-test + dispatch + flatten->PaintList->pixels).
+    # P1 Probe-1: evdev accumulator unit test (pure logic, no device). IS a ctest.    # P3-a: widget tree unit test (hit-test + dispatch + flatten->PaintList->pixels).
     add_executable(widget-test test/test_widget.cpp)
     target_link_libraries(widget-test PRIVATE cinux-gui)
     add_test(NAME widget-test COMMAND widget-test)

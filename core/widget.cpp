@@ -108,11 +108,12 @@ void Desktop::render(Surface& staging, const PsfFont& font, Region* dirty) {
     root_->layout();
     PaintList list;
     root_->flatten(list);
+    Compositor     comp;  // P6-d: class -- add primitives via set_handler, not a switch
     const uint32_t n = d->count();
     for (uint32_t i = 0u; i < n; ++i) {  // repaint each dirty rect, clipped to it
         const Rect&    r = d->rects()[i];
         const ClipRect clip{r.x0, r.y0, r.x1, r.y1};
-        execute(staging, list, font, &clip);
+        comp.render(staging, list, font, &clip);
     }
 }
 

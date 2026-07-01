@@ -129,7 +129,7 @@
 | **P6-a** | TextBox（键盘输入 + 光标）+ Checkbox(toggle) + Widget on_key/Desktop dispatch_key+focus 键盘路由 | ✅ | — | textbox-test + checkbox-test（ctest 21/21 + ASAN）；sdl-host 键盘 demo 留眼检 |
 | **P6-b** | 窗口 resize（右下角 grip 拖调大小，min 40×24）+ 最大化/还原（set_maximized 存 prev）+ 最小化（set_minimized hide） | ✅ | — | resize-test（拖调 + maximize 还原 + minimize hide） |
 | **P6-c** | 终端 ANSI bg(40-47/100-107) + 256 色(38;5;N fg / 48;5;N bg) + 光标块(visible cursor) | ✅ | — | terminal-bg256-test（bg/256/reset/cursor block） |
-| **P6-d** | Scene 退役（迁 offscreen/replay host 控件树 + 删 `core/scene.*` + compose(Scene) + test_scene/test_compositor） | 🔜 NEXT | — | 迁移零回归 + Scene 删后 ctest 绿 |
+| **P6-d** | Scene 退役：删 core/scene.* + compose(Scene)/旧 Compositor(Scene) + offscreen/replay host + test_scene/test_compositor；Compositor 重做 **handler 表 OCP**（class + set_handler，加图元不改 render） | ✅ | — | ctest 19/19 + ASAN（Scene 零残留，Compositor handler OCP） |
 
 ## 验证哲学
 

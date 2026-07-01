@@ -71,7 +71,10 @@ int main() {
     Surface   s3{b3, kW, kH, kW * 4u, PixelFormat::kXrgb8888};
     PaintList list;
     list.text_scaled(0, 0, 0x00FFFFFFu, "A", 2);
-    execute(s3, list, font);
+    {
+        Compositor comp;  // P6-d: Compositor is a class now
+        comp.render(s3, list, font);
+    }
     assert(count_white(b3, kW, kH) == n2);
 
     std::printf("test_font_scale: OK\n");
