@@ -66,16 +66,25 @@ struct Surface {
 void fill_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color,
                const ClipRect* clip);
 
+/* Per-corner selection for fill_rounded_rect (P5-d). Bitmask; kCornerAll = all
+ * four rounded. A corner bit cleared leaves that corner square. */
+inline constexpr uint32_t kCornerTL  = 1u;  // top-left
+inline constexpr uint32_t kCornerTR  = 2u;  // top-right
+inline constexpr uint32_t kCornerBL  = 4u;  // bottom-left
+inline constexpr uint32_t kCornerBR  = 8u;  // bottom-right
+inline constexpr uint32_t kCornerAll = 0xFu;
+
 /**
- * @brief Solid rounded-rectangle fill (Material shape; P3-b)
+ * @brief Solid rounded-rectangle fill (Material shape; P3-b, per-corner P5-d)
  *
- * Like fill_rect but with @p radius-pixel rounded corners. The radius is
- * clamped to min(w,h)/2 so corner arcs never overlap; radius == 0 is exactly
- * fill_rect. Integer-only: per-row corner offset via an integer isqrt
- * (floor(sqrt(r²-d²))). XRGB8888 only; other formats no-op.
+ * Like fill_rect but with @p radius-pixel rounded corners on the corners
+ * selected by @p corners (kCorner* bitmask; kCornerAll = all four). radius is
+ * clamped to min(w,h)/2; radius == 0 or corners == 0 is exactly fill_rect.
+ * Integer-only: per-row corner offset via integer isqrt (floor(sqrt(r²-d²))).
+ * XRGB8888 only; other formats no-op.
  */
 void fill_rounded_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color,
-                       uint32_t radius, const ClipRect* clip);
+                       uint32_t radius, const ClipRect* clip, uint32_t corners = kCornerAll);
 
 /**
  * @brief Opaque pixel copy src -> dst (generalises Canvas::blit)
@@ -108,6 +117,16 @@ void blit_blend(Surface& dst, int32_t dx, int32_t dy, const Surface& src, uint32
  */
 void glyph_blit(Surface& s, int32_t x, int32_t y, const uint8_t* bits, uint32_t gw, uint32_t gh,
                 uint32_t color, const ClipRect* clip);
+
+/**
+ * @brief Scaled 1-bpp alpha-mask -> solid colour blit (P5-a: integer font scale)
+ *
+ * Like glyph_blit but each set bit becomes a scale×scale block (nearest
+ * neighbour, via fill_rect). scale==1 reproduces glyph_blit. Lets the bundled
+ * 8x16 PSF render as 16x32 / 24x48 for larger UI text without new font data.
+ */
+void glyph_blit_scaled(Surface& s, int32_t x, int32_t y, const uint8_t* bits, uint32_t gw,
+                       uint32_t gh, uint32_t scale, uint32_t color, const ClipRect* clip);
 
 /**
  * @brief Bresenham line (generalises Canvas::draw_line), per-point clipped

@@ -22,8 +22,8 @@
 | **P1** | 探针 Probe-1：真 fbdev + evdev（第二个真 host，证明解耦缝） | ✅ 完成：代码 + 单测（4 ctest + ASAN）+ 真 QEMU 冒烟 PASS（自构建 kernel+initramfs，`fb0:bochs-drmdrmfb`+usb-tablet+fbdev-host 跑满 40s 不崩，像素证据）；笔记 `notes/2026-06-30-p1-probe1-fbdev-host.md` |
 | **P2** | 渲染收敛核心：swraster 正式接管，compositor dirty-region（只重画脏区，省 composite 本身） | ✅ 完成（4 批 a/b/c/d）：host-neutral Scene（数据）+ Compositor（全画 + 帧间 dirty diff）收敛三 host 画法；fbdev QEMU 冒烟 PASS + 像素眼检；Host ABI 零改动。笔记 `notes/2026-07-01-p2-*.md` |
 | **P3** | 控件工具箱：Button / Label / Slider / Container + 布局 + 事件路由 | ✅ 完成（4 批 a/b/c/d）：Widget 树 + PaintList + 事件路由 + 圆角/Material flat Theme + Label/Button/Slider/Container/HBox/VBox + press capture; widgets-host demo Material 端到端（ctest + 像素眼检）。fbdev 控件化 + Scene 退役作 follow-up。Host ABI 零改动 |
-| **P4** | 桌面迁入仓库：CinuxOS `kernel/gui/` 的 WM/terminal/desktop 搬上表、host-neutral；CinuxOS 只剩 `host_cinux` | 待启动 |
-| **P5** | 字体/文本（PSF → 更全）、主题 | 待启动 |
+| **P4** | 桌面迁入（路 A：Widget 重建）：本仓 P3 控件框架上重建 WM/Window/Terminal 桌面语义；terminal IO 走 PTY fork+exec；CinuxOS **暂不删** `kernel/gui/`（只 pin 新本仓，删码留后续） | ✅ 完成（5 批 a/b/c/d/e；ctest 15/15 + ASAN；Host ABI 零改动） |
+| **P5** | 增强：字体/文本（缩放渲染 + 测量）+ 主题运行时切换 + per-widget dirty + flex 布局/per-corner 圆角 + 终端 ANSI 彩色渲染 | ✅ 完成（5 批 a-e；ctest 19/19 + ASAN；Host ABI 零改动） |
 | **P6** | GPU texture compositor（有真 GPU 目标后；非 primitive draw-list） | 远期 |
 | **P7** | 多进程 Surface 协议（attach/damage/commit/release；ring-3 桌面 server） | 远期 |
 | **MCU 线** | visor 嵌入式（STM32F1 等）：独立 micro renderer，推迟到真板 RAM<20KB 实测后 | 长弧推迟 |
@@ -32,7 +32,7 @@
 
 - **探针阶段（P0/P1）：CinuxOS 内核零改动。** CinuxOS 仍 pin `4c84eb2`，照常编 / 跑 / 过 `run-kernel-test`。
 - **P2 起 Host ABI 若变**：CinuxOS bump pin + 改一处 `kernel/gui/host_cinux.cpp`（`render_frame` 改画 staging Surface）。**这是 CinuxOS 侧唯一对接点。**
-- **P4 后**：CinuxOS `kernel/gui/` 的 WM/terminal/desktop 搬走，**CinuxOS GUI 代码净减少**，只剩 `host_cinux` + framebuffer handoff。
+- **P4 后（路 A）**：本仓重建 WM/Window/Terminal 桌面层（host-neutral）；CinuxOS `kernel/gui/` 旧码**暂留对照**（P4 仅本仓重建 + Host ABI 变更时 bump pin），后续里程碑再删 → 届时 CinuxOS GUI 净减少。
 - **push / PR**：Claude 在 feature 分支 commit（绿才提交）；**push 与 PR 由用户控制**。
 
 > **CinuxOS 侧 F13 文档待同步**（CinuxOS 在疯狂开发，不急，择机）：把 ROADMAP F13 行改成指向本仓；清理 `document/todo/README.md` 里 stale 的 3-milestone 模型；visor-02 §9 risk 表对齐 git 现状（PIT 反转等项已落地）。

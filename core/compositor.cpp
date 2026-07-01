@@ -55,6 +55,27 @@ void draw_text(Surface& s, const PsfFont& font, const char* str, int32_t x, int3
     }
 }
 
+/* Like draw_text but each glyph is glyph_blit_scaled at @p scale (P5-a). '\n'
+ * wraps to the next row (one font.height() * scale). nullptr/empty is a no-op. */
+void draw_text_scaled(Surface& s, const PsfFont& font, const char* str, int32_t x, int32_t y,
+                      uint32_t color, uint32_t scale, const ClipRect* clip) {
+    if (str == nullptr) {
+        return;
+    }
+    int32_t cx = x;
+    int32_t cy = y;
+    for (const char* p = str; *p != '\0'; p++) {
+        if (*p == '\n') {
+            cx = x;
+            cy += static_cast<int32_t>(font.height() * scale);
+            continue;
+        }
+        glyph_blit_scaled(s, cx, cy, font.glyph(static_cast<uint8_t>(*p)), font.width(),
+                          font.height(), scale, color, clip);
+        cx += static_cast<int32_t>(font.width() * scale);
+    }
+}
+
 /* Paint one window: face fill -> titlebar band -> edge outline -> title text
  * -> body text. The order and text positions are exactly what the three hosts
  * used, so output is pixel-identical to the old hand-written paint. @p clip
@@ -170,14 +191,18 @@ void Compositor::compose(Surface& staging, const Scene& scene, const PsfFont& fo
     first_ = false;
 }
 
-void execute(Surface& staging, const PaintList& list, const PsfFont& font) {
+void execute(Surface& staging, const PaintList& list, const PsfFont& font, const ClipRect* outer) {
     /* Clip stack: each kClipPush intersects with its parent, so a widget can
      * never paint outside its ancestors' rects. top == -1 means unclipped
-     * (primitives clip to the surface bounds only, via nullptr). */
+     * (primitives clip to the surface bounds only, via nullptr). @p outer (P5-f)
+     * is an optional base clip -- a dirty rect limits the whole repaint to it. */
     constexpr uint32_t kMaxClip = 32;
     ClipRect           stack[kMaxClip];
     int32_t            top = -1;
-    const auto         cur = [&]() -> const ClipRect* { return top >= 0 ? &stack[top] : nullptr; };
+    if (outer != nullptr) {
+        stack[++top] = *outer;  // P5-f: base clip (dirty rect)
+    }
+    const auto cur = [&]() -> const ClipRect* { return top >= 0 ? &stack[top] : nullptr; };
 
     const uint32_t n = list.count();
     for (uint32_t i = 0u; i < n; i++) {
@@ -188,10 +213,23 @@ void execute(Surface& staging, const PaintList& list, const PsfFont& font) {
                 break;
             case CmdKind::kFillRoundRect:
                 fill_rounded_rect(staging, c.rfill.x, c.rfill.y, c.rfill.w, c.rfill.h,
-                                  c.rfill.color, c.rfill.radius, cur());
+                                  c.rfill.color, c.rfill.radius, cur(), c.rfill.corners);
                 break;
             case CmdKind::kText:
                 draw_text(staging, font, c.text.text, c.text.x, c.text.y, c.text.color, cur());
+                break;
+            case CmdKind::kTextGlyph: {
+                /* Single inlined char -- no borrowed pointer (terminal cells). */
+                const uint8_t* bits = font.glyph(static_cast<uint8_t>(c.glyph.ch));
+                if (bits != nullptr) {
+                    glyph_blit(staging, c.glyph.x, c.glyph.y, bits, font.width(), font.height(),
+                               c.glyph.color, cur());
+                }
+                break;
+            }
+            case CmdKind::kTextScaled:
+                draw_text_scaled(staging, font, c.scaled.text, c.scaled.x, c.scaled.y,
+                                 c.scaled.color, c.scaled.scale, cur());
                 break;
             case CmdKind::kClipPush: {
                 if (top + 1 < static_cast<int32_t>(kMaxClip)) {

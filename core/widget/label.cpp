@@ -16,7 +16,11 @@ void Label::paint_to_list(PaintList& list) const {
         list.fill_rect(rect_.x0, rect_.y0, rect_.width(), rect_.height(), bg_);
     }
     if (text_ != nullptr && text_[0] != '\0') {
-        list.text(rect_.x0 + 4, rect_.y0 + 4, color_, text_);
+        if (scale_ > 1u) {
+            list.text_scaled(rect_.x0 + 4, rect_.y0 + 4, color_, text_, scale_);
+        } else {
+            list.text(rect_.x0 + 4, rect_.y0 + 4, color_, text_);
+        }
     }
 }
 

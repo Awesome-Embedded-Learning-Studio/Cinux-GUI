@@ -41,12 +41,15 @@ void Slider::on_pointer(const PointerPayload& p) {
     if (p.kind == kPointerKindDown) {
         dragging_ = true;
         apply_x_(p.x);
+        invalidate();  // P5-c: thumb position changed
     } else if (p.kind == kPointerKindMove) {
         if (dragging_) {
             apply_x_(p.x);
+            invalidate();
         }
     } else if (p.kind == kPointerKindUp) {
         dragging_ = false;
+        invalidate();
     }
 }
 

@@ -35,8 +35,10 @@ void Button::paint_to_list(PaintList& list) const {
 void Button::on_pointer(const PointerPayload& p) {
     if (p.kind == kPointerKindDown) {
         pressed_ = true;
+        invalidate();  // P5-c: pressed state changed
     } else if (p.kind == kPointerKindUp) {
         pressed_ = false;
+        invalidate();
     }
 }
 

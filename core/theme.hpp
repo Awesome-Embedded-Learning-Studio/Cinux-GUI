@@ -36,15 +36,18 @@ inline constexpr uint32_t kRadiusLarge  = 16;
  * rather than hardcoding, so light/dark swap is one call.
  */
 struct Theme {
-    uint32_t primary;        // accent / filled buttons
-    uint32_t on_primary;     // text/icon on primary
-    uint32_t surface;        // card / button face
-    uint32_t on_surface;     // text on surface
-    uint32_t background;     // app background
-    uint32_t error;          // error
-    uint32_t outline;        // hairline borders
-    uint32_t button_radius;  // default button corner radius (px)
-    uint32_t card_radius;    // default card corner radius (px)
+    uint32_t primary;               // accent / filled buttons
+    uint32_t on_primary;            // text/icon on primary
+    uint32_t primary_container;     // P5-b: tonal container (secondary fill)
+    uint32_t on_primary_container;  // text on primary_container
+    uint32_t surface;               // card / button face
+    uint32_t on_surface;            // text on surface
+    uint32_t surface_variant;       // P5-b: muted surface (subtle bg/borders)
+    uint32_t background;            // app background
+    uint32_t error;                 // error
+    uint32_t outline;               // hairline borders
+    uint32_t button_radius;         // default button corner radius (px)
+    uint32_t card_radius;           // default card corner radius (px)
 };
 
 /** Material light theme (the default). */

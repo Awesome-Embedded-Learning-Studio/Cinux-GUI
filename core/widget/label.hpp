@@ -24,6 +24,8 @@ public:
     void set_color(uint32_t c) { color_ = c; }
     /** Background fill colour; 0 = transparent (no fill, inherits parent). */
     void set_bg(uint32_t bg) { bg_ = bg; }
+    /** Integer text scale (1 = native 8x16, 2 = 16x32, ...). P5-a. */
+    void set_scale(uint32_t s) { scale_ = s; }
 
 protected:
     void paint_to_list(PaintList& list) const override;
@@ -32,6 +34,7 @@ private:
     const char* text_  = "";
     uint32_t    color_ = 0x00FFFFFFu;
     uint32_t    bg_    = 0u;
+    uint32_t    scale_ = 1u;
 };
 
 }  // namespace cinux::gui

@@ -48,6 +48,9 @@ add_library(cinux-gui STATIC
     core/widget/container.cpp
     core/widget/label.cpp
     core/widget/slider.cpp
+    core/widget/window.cpp
+    core/widget/window_manager.cpp
+    core/widget/terminal.cpp
     core/abi_check.cpp
 )
 # core/ is PUBLIC so consumers (a host adapter, the harness) resolve the bare
@@ -106,6 +109,21 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(theme-test PRIVATE cinux-gui)
     add_test(NAME theme-test COMMAND theme-test)
 
+    # P5-a: font scaling (glyph_blit_scaled) + text measurement.
+    add_executable(font-scale-test test/test_font_scale.cpp)
+    target_link_libraries(font-scale-test PRIVATE cinux-gui)
+    add_test(NAME font-scale-test COMMAND font-scale-test)
+
+    # P5-c: per-widget dirty + Desktop::render idle skip.
+    add_executable(dirty-test test/test_dirty.cpp)
+    target_link_libraries(dirty-test PRIVATE cinux-gui)
+    add_test(NAME dirty-test COMMAND dirty-test)
+
+    # P5-d: HBox/VBox flex weights + per-corner rounded rects.
+    add_executable(flex-test test/test_flex.cpp)
+    target_link_libraries(flex-test PRIVATE cinux-gui)
+    add_test(NAME flex-test COMMAND flex-test)
+
     # P3-c: basic widgets (Label/Button/Container) + HBox/VBox layout.
     add_executable(widgets-test test/test_widgets.cpp)
     target_link_libraries(widgets-test PRIVATE cinux-gui)
@@ -115,6 +133,32 @@ if(CINUX_GUI_STANDALONE)
     add_executable(slider-test test/test_slider.cpp)
     target_link_libraries(slider-test PRIVATE cinux-gui)
     add_test(NAME slider-test COMMAND slider-test)
+
+    # P4-a: Window widget (title bar + drag + close + hit-test).
+    add_executable(window-test test/test_window.cpp)
+    target_link_libraries(window-test PRIVATE cinux-gui)
+    add_test(NAME window-test COMMAND window-test)
+
+    # P4-b: WindowManager (Z-order + raise + close + cursor).
+    add_executable(window-manager-test test/test_window_manager.cpp)
+    target_link_libraries(window-manager-test PRIVATE cinux-gui)
+    add_test(NAME window-manager-test COMMAND window-manager-test)
+
+    # P4-c: TerminalWidget (char grid + write/scroll/paint).
+    add_executable(terminal-test test/test_terminal.cpp)
+    target_link_libraries(terminal-test PRIVATE cinux-gui)
+    add_test(NAME terminal-test COMMAND terminal-test)
+
+    # P5-e: TerminalWidget ANSI SGR colour + cursor + clear.
+    add_executable(terminal-ansi-test test/test_terminal_ansi.cpp)
+    target_link_libraries(terminal-ansi-test PRIVATE cinux-gui)
+    add_test(NAME terminal-ansi-test COMMAND terminal-ansi-test)
+
+    # P4-d: posix_spawn (forkpty) unit test -- host layer, links libutil.
+    add_executable(posix-spawn-test test/test_posix_spawn.cpp host/posix_spawn.cpp)
+    target_include_directories(posix-spawn-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/host)
+    target_link_libraries(posix-spawn-test PRIVATE util)
+    add_test(NAME posix-spawn-test COMMAND posix-spawn-test)
 
     # P3-d: widgets demo host (Material widget tree -> one PPM frame).
     add_executable(widgets-dump host/widgets_host_main.cpp host/ppm_writer.cpp)
@@ -138,5 +182,14 @@ if(CINUX_GUI_STANDALONE)
         find_package(SDL2 REQUIRED)
         add_executable(sdl-host host/sdl_host_main.cpp)
         target_link_libraries(sdl-host PRIVATE cinux-gui SDL2::SDL2)
+    endif()
+
+    # P4-d: SDL2 interactive terminal host (real shell via PTY; opt-in).
+    # Host layer only -- core never sees SDL or PTY.
+    option(CINUX_HOST_TERMINAL "Build SDL2 interactive terminal host (needs SDL2 + PTY)" OFF)
+    if(CINUX_HOST_TERMINAL)
+        find_package(SDL2 REQUIRED)
+        add_executable(terminal-host host/terminal_host_main.cpp host/posix_spawn.cpp)
+        target_link_libraries(terminal-host PRIVATE cinux-gui SDL2::SDL2 util)
     endif()
 endif()

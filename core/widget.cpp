@@ -27,6 +27,7 @@ void Widget::add_child(Widget* w) {
         return;  // full or null -> drop (caller keeps kMaxChildren generous)
     }
     children_[child_count_++] = w;
+    w->parent_                = this;  // P5-c: so invalidate() propagates up
 }
 
 void Widget::flatten(PaintList& list) const {
@@ -79,18 +80,33 @@ void Desktop::dispatch_pointer(const PointerPayload& p) {
 }
 
 void Desktop::render(Surface& staging, const PsfFont& font, Region* dirty) {
-    if (dirty != nullptr) {
-        dirty->clear();
-        dirty->add(
-            Rect{0, 0, static_cast<int32_t>(staging.width), static_cast<int32_t>(staging.height)});
-    }
+    Region  local;
+    Region* d = (dirty != nullptr) ? dirty : &local;
+    d->clear();
     if (root_ == nullptr) {
         return;
     }
-    root_->layout();  // position children within their parent's rect
+    const Rect full{0, 0, static_cast<int32_t>(staging.width),
+                    static_cast<int32_t>(staging.height)};
+    if (first_) {
+        d->add(full);  // P5-f: first frame paints everything
+        first_ = false;
+    } else {
+        root_->collect_dirty(*d);  // P5-f: per-widget dirty rects
+    }
+    if (d->empty()) {
+        return;  // idle -> 0 rects -> pump flushes nothing
+    }
+    root_->clear_dirty();
+    root_->layout();
     PaintList list;
     root_->flatten(list);
-    execute(staging, list, font);
+    const uint32_t n = d->count();
+    for (uint32_t i = 0u; i < n; ++i) {  // repaint each dirty rect, clipped to it
+        const Rect&    r = d->rects()[i];
+        const ClipRect clip{r.x0, r.y0, r.x1, r.y1};
+        execute(staging, list, font, &clip);
+    }
 }
 
 }  // namespace cinux::gui

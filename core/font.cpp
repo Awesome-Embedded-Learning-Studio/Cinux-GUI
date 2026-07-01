@@ -31,8 +31,7 @@ constexpr uint32_t kOffHeaderSize = 8;
 constexpr uint32_t kPsf2HeaderLen = 32;
 
 inline uint32_t le_u32(const uint8_t* p) {
-    return uint32_t(p[0]) | (uint32_t(p[1]) << 8) | (uint32_t(p[2]) << 16) |
-           (uint32_t(p[3]) << 24);
+    return uint32_t(p[0]) | (uint32_t(p[1]) << 8) | (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24);
 }
 
 }  // namespace
@@ -63,6 +62,41 @@ const uint8_t* PsfFont::glyph(uint8_t c) const {
         c = 0; /* out-of-range collapses to glyph 0, matching the kernel renderer */
     }
     return glyphs_ + static_cast<uint32_t>(c) * bytes_per_glyph_;
+}
+
+uint32_t text_width(const PsfFont& f, const char* str, uint32_t scale) {
+    if (!f.ready() || str == nullptr) {
+        return 0u;
+    }
+    /* Longest line width; '\n' ends a line. */
+    uint32_t max_w = 0u;
+    uint32_t cur   = 0u;
+    for (const char* p = str; *p != '\0'; ++p) {
+        if (*p == '\n') {
+            if (cur > max_w) {
+                max_w = cur;
+            }
+            cur = 0u;
+        } else {
+            cur += f.width() * scale;
+        }
+    }
+    return (cur > max_w) ? cur : max_w;
+}
+
+uint32_t text_height(const PsfFont& f, const char* str, uint32_t scale) {
+    if (!f.ready()) {
+        return 0u;
+    }
+    uint32_t lines = 1u;
+    if (str != nullptr) {
+        for (const char* p = str; *p != '\0'; ++p) {
+            if (*p == '\n') {
+                ++lines;
+            }
+        }
+    }
+    return lines * f.height() * scale;
 }
 
 }  // namespace cinux::gui

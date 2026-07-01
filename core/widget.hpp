@@ -48,6 +48,10 @@ public:
     void set_visible(bool v) { visible_ = v; }
     bool visible() const { return visible_; }
 
+    /** Flex weight for HBox/VBox layout (P5-d). Default 1 = equal share. */
+    void     set_flex(uint32_t f) { flex_ = f; }
+    uint32_t flex() const { return flex_; }
+
     void     add_child(Widget* w);
     uint32_t child_count() const { return child_count_; }
     Widget*  child(uint32_t i) const { return i < child_count_ ? children_[i] : nullptr; }
@@ -82,6 +86,31 @@ public:
      */
     virtual void layout() {}
 
+    /** Mark this widget's own rect dirty (call on visible state change). */
+    void invalidate() { invalidate(rect_); }
+    /** Mark an arbitrary rect dirty (P5-f: cursor/move footprints, term rows). */
+    void invalidate(Rect r) {
+        dirty_self_ = true;
+        dirty_rect_ = rect_union(dirty_rect_, r);
+    }
+    /** Append this widget's dirty rect (if any) + recurse children. P5-f. */
+    virtual void collect_dirty(Region& sink) const {
+        if (dirty_self_) {
+            sink.add(dirty_rect_);
+        }
+        for (uint32_t i = 0u; i < child_count_; ++i) {
+            children_[i]->collect_dirty(sink);
+        }
+    }
+    /** Clear dirty on this widget and all descendants. */
+    virtual void clear_dirty() {
+        dirty_self_ = false;
+        dirty_rect_ = Rect{1, 1, 0, 0};  // degenerate (empty)
+        for (uint32_t i = 0u; i < child_count_; ++i) {
+            children_[i]->clear_dirty();
+        }
+    }
+
 protected:
     /** Subclass drawing (clip already set to this widget's rect). Default: noop. */
     virtual void paint_to_list(PaintList& list) const { (void)list; }
@@ -90,6 +119,10 @@ protected:
     bool     visible_                = true;
     Widget*  children_[kMaxChildren] = {};
     uint32_t child_count_            = 0u;
+    Widget*  parent_                 = nullptr;  // set by add_child
+    bool     dirty_self_             = true;     // P5-f: start dirty (frame 1 via Desktop::first_)
+    Rect     dirty_rect_             = Rect{1, 1, 0, 0};  // P5-f: accumulated dirty
+    uint32_t flex_                   = 1u;                // P5-d: HBox/VBox weight (1 = equal)
 };
 
 /**
@@ -120,6 +153,7 @@ public:
 private:
     Widget* root_         = nullptr;
     Widget* press_target_ = nullptr;  // P3-d: press capture (drag tracks the press widget)
+    bool    first_        = true;     // P5-f: paint full screen on frame 1
 };
 
 }  // namespace cinux::gui
