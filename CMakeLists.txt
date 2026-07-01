@@ -121,9 +121,22 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(widgets-dump PRIVATE cinux-gui)
     add_test(NAME widgets-dump COMMAND widgets-dump)
 
+    # P3 demo: rich Material widget frame (eyeball, not a test).
+    add_executable(demo-dump host/demo_host_main.cpp host/ppm_writer.cpp)
+    target_link_libraries(demo-dump PRIVATE cinux-gui)
+
     # P1 Probe-1: real Linux fbdev+evdev host. Manual smoke under QEMU only
     # (needs /dev/fb0 + /dev/input/event*); NOT a ctest.
     add_executable(fbdev-host host/linux_fbdev_main.cpp host/fbdev_device.cpp
                           host/evdev_device.cpp)
     target_link_libraries(fbdev-host PRIVATE cinux-gui)
+
+    # P3 demo: SDL2 interactive host (desktop window; opt-in, needs SDL2).
+    # Host layer only -- core never sees SDL.
+    option(CINUX_HOST_SDL "Build SDL2 interactive widget host (needs SDL2)" OFF)
+    if(CINUX_HOST_SDL)
+        find_package(SDL2 REQUIRED)
+        add_executable(sdl-host host/sdl_host_main.cpp)
+        target_link_libraries(sdl-host PRIVATE cinux-gui SDL2::SDL2)
+    endif()
 endif()

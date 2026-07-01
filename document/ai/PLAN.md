@@ -19,7 +19,7 @@
 
 ### 关键的「没有」（本仓）
 
-- 没有控件 / WM / 合成器 / SDL/X11/Wayland 真 host（README 全 TODO）。
+- 没有控件 / WM / 合成器 / SDL/X11/Wayland 真 host（README 全 TODO）。→ **P3 控件工具箱已落地**（Widget/Label/Button/Slider/Container/HBox/VBox + Material）；**SDL2 交互 host**（`sdl-host`,opt-in `-DCINUX_HOST_SDL=ON`,host 层 core 零 SDL）+ `demo-dump`（丰富 Material PPM）已加；X11/Wayland/WM 仍 TODO。
 - ~~**swraster 没接进 pump**~~ → **P0-a 已接进渲染路径**：core 拥有 staging Surface（新增 `GuiCore`），pump 预填 staging → host 经 `render_frame` 画进去 + 报脏区 → region 收脏 → flush。但 **host 还没画真场景**（窗口/光标/文字 = P0-b 的 offscreen host），目前 fake_host 只验证所有权链路。
 
 ### CinuxOS 侧（不在本仓，但要知道）
