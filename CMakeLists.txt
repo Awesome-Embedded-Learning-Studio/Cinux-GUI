@@ -52,6 +52,8 @@ add_library(cinux-gui STATIC
     core/widget/terminal.cpp
     core/widget/textbox.cpp
     core/widget/checkbox.cpp
+    core/widget/radio.cpp
+    core/widget/dropdown.cpp
     core/abi_check.cpp
 )
 # core/ is PUBLIC so consumers (a host adapter, the harness) resolve the bare
@@ -105,6 +107,16 @@ if(CINUX_GUI_STANDALONE)
     add_executable(checkbox-test test/test_checkbox.cpp)
     target_link_libraries(checkbox-test PRIVATE cinux-gui)
     add_test(NAME checkbox-test COMMAND checkbox-test)
+
+    # P7-a: Radio + RadioGroup (exclusive selection).
+    add_executable(radio-test test/test_radio.cpp)
+    target_link_libraries(radio-test PRIVATE cinux-gui)
+    add_test(NAME radio-test COMMAND radio-test)
+
+    # P7-a: Dropdown (open / select-row / close).
+    add_executable(dropdown-test test/test_dropdown.cpp)
+    target_link_libraries(dropdown-test PRIVATE cinux-gui)
+    add_test(NAME dropdown-test COMMAND dropdown-test)
 
     # P6-b: Window resize grip + maximize/minimize.
     add_executable(resize-test test/test_resize.cpp)

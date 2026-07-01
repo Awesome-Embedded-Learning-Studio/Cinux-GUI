@@ -131,6 +131,16 @@
 | **P6-c** | 终端 ANSI bg(40-47/100-107) + 256 色(38;5;N fg / 48;5;N bg) + 光标块(visible cursor) | ✅ | — | terminal-bg256-test（bg/256/reset/cursor block） |
 | **P6-d** | Scene 退役：删 core/scene.* + compose(Scene)/旧 Compositor(Scene) + offscreen/replay host + test_scene/test_compositor；Compositor 重做 **handler 表 OCP**（class + set_handler，加图元不改 render） | ✅ | — | ctest 19/19 + ASAN（Scene 零残留，Compositor handler OCP） |
 
+## 批表（P7 控件扩展 + sdl demo + Compositor 状态）🔄
+
+> 决策点（用户拍板"3+4 一起"）：Radio/Dropdown 控件 + sdl-host 键盘 demo（TextBox 端到端）+ Compositor cursor footprint（光标渲染进合成器类，handler 表铺的路用上）。**Host ABI 目标零改动**。
+
+| 批 | 范围 | 状态 | commit | 测试 |
+|---|---|---|---|---|
+| **P7-a** | Radio + RadioGroup（非 Widget 单选管理器）+ Dropdown（rect 全列表高，closed 顶行/expanded 全 + 高亮） | ✅ | — | radio-test（互斥）+ dropdown-test（open/select/close）ctest 21/21 |
+| **P7-b** | sdl-host 补键盘路由（SDL_TEXTINPUT/KEYDOWN → dispatch_key）+ TextBox/Radio/Dropdown demo | 🔜 | — | sdl-host 编译 + 眼检 |
+| **P7-c** | Compositor cursor footprint：cursor 渲染从 WM paint 移进 Compositor（持 cursor 状态），WM 只 set_cursor；handler 表已铺路（状态进类不动调用方） | 🔜 | — | cursor-test（Compositor cursor 渲染）+ WM 适配 |
+
 ## 验证哲学
 
 - **能确定的，全部自动化进本仓 ctest**：渲染对不对 = 金帧对比；脏区对不对 = 断言 `flush` 了哪些 rect；崩不崩 / ASAN / UBSAN = 自动。
