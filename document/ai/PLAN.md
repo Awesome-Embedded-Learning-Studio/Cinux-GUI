@@ -3,6 +3,7 @@
 > 批级（最易变）。**里程碑全树见 [ROADMAP.md](ROADMAP.md)。**
 > **P0 Probe-0 完成 ✅**：核心渲染管线 standalone 跑通——pump→core.staging→swraster→glyph_blit→flush，事件回放驱动拖拽，脏区纪律断言（idle 0 / 首帧全屏 / 后续局部）。3 个 ctest（smoke + offscreen + replay）全绿 + ASAN 干净。
 > **P1 Probe-1 完成 ✅**：fbdev+evdev 真 host（`host/linux_fbdev_main.cpp`）+ evdev accumulator 单测（`test/test_evdev.cpp`，4 ctest 绿 + ASAN）+ **真 QEMU 冒烟 PASS**（自构建 x86_64 kernel + busybox initramfs，`fb0:bochs-drmdrmfb` + usb-tablet + fbdev-host 跑满 40s 不崩，像素采样验场景画对）。core 一行没动，只换 host 表——解耦缝证毕。详见 `document/notes/2026-06-30-p1-probe1-fbdev-host.md`。
+> **P2 渲染收敛核心 ✅ 完成**：host-neutral **Scene（数据）+ Compositor（渲染器）** 收敛三 host 重复画法 + frame-to-frame dirty diff（只 composite 变化区，省 CPU 不止省 flush）。三 host 已切 Compositor，fbdev QEMU 冒烟 PASS（像素眼检无误）。**Host ABI 零改动**（CinuxOS 不 bump pin）。4 批 a/b/c/d 详见批表 + 笔记 `notes/2026-07-01-p2-*.md`。
 
 ## 现状速览（我们站在哪）
 
@@ -62,6 +63,17 @@
 | **P0-b2** | offscreen host + PPM dump + 静态场景（窗口 + 标题栏 + 多行文字 + 光标）一帧 | ✅ | `f08abbf` | ctest 绿 + ASAN + 视觉确认 |
 | **P0-b3** | 事件回放（文本→Event）+ 拖拽交互 + 多帧 dump + 金帧/脏区断言 | ✅ | `f4c95ca` | ctest 绿 + ASAN + 几何/脏区断言 |
 | **P0-c** | 金帧 / 脏区断言进 ctest + host 单测 ASAN 自验 | ✅ 被吸收 | — | 脏区断言进 ctest（b3）+ 金帧用结构断言代替二进制 fixture（更鲁棒）+ 每批 ASAN |
+
+## 批表（P2 渲染收敛核心）
+
+> 决策点已定（用户拍板）：① Scene/Compositor 放 `core/`（host-neutral 库本位；GuiCore「对场景无知」指 pump 驱动器，非禁 core/ 有 Scene 类型）② `draw_text`/`draw_rect_outline` 留 Compositor 内部（保 swraster 纯原语层，不反向依赖 font）③ 帧间 dirty 由 Compositor 持 prev Scene 处理（窗口移动露背景 = old_rect∪new_rect 进 Region）。**Host ABI 零改动，CinuxOS 不 bump pin**。
+
+| 批 | 范围 | 状态 | commit | 测试 |
+|---|---|---|---|---|
+| **P2-a** | Scene 数据模型（`core/scene.*`：Window 栈 + Cursor + 文本 run，纯 POD，零 swraster/host include） | ✅ | `2fe37af` | 新 `test_scene.cpp`：构造/几何/截断/容量断言绿 + ASAN |
+| **P2-b** | Compositor 接管绘制（`core/compositor.*`：`compose(staging, scene)`，收敛三 host 重复 paint） | ✅ | `f18414e` | 新 `test_compositor.cpp`：像素结构 == 旧 offscreen（零回归） |
+| **P2-c** | 帧间 dirty diff（Compositor 持 prev Scene，只 composite 变化区，返回 dirty Region） | ✅ | `4310e64` | compositor-test dirty 段：首帧全屏 / idle / cursor 移 / window 移（+露 bg）/ bg 变 |
+| **P2-d** | 三 host 切 Compositor + fbdev QEMU 冒烟验无回归 | ✅ | `59aa964` | ctest 全绿 + ASAN + QEMU 冒烟 PASS（像素眼检无误） |
 
 ## 验证哲学
 

@@ -20,7 +20,7 @@
 |---|---|---|
 | **P0** | 探针 Probe-0：无头跑通核心渲染管线（swraster 接 pump + offscreen host + 事件回放 + 极简场景 + 金帧验证） | ✅ 完成（PR #2 合入 main）：3 ctest + ASAN，pump→staging→swraster→glyph→flush 端到端 |
 | **P1** | 探针 Probe-1：真 fbdev + evdev（第二个真 host，证明解耦缝） | ✅ 完成：代码 + 单测（4 ctest + ASAN）+ 真 QEMU 冒烟 PASS（自构建 kernel+initramfs，`fb0:bochs-drmdrmfb`+usb-tablet+fbdev-host 跑满 40s 不崩，像素证据）；笔记 `notes/2026-06-30-p1-probe1-fbdev-host.md` |
-| **P2** | 渲染收敛核心：swraster 正式接管，compositor dirty-region（只重画脏区，省 composite 本身） | 待启动 |
+| **P2** | 渲染收敛核心：swraster 正式接管，compositor dirty-region（只重画脏区，省 composite 本身） | ✅ 完成（4 批 a/b/c/d）：host-neutral Scene（数据）+ Compositor（全画 + 帧间 dirty diff）收敛三 host 画法；fbdev QEMU 冒烟 PASS + 像素眼检；Host ABI 零改动。笔记 `notes/2026-07-01-p2-*.md` |
 | **P3** | 控件工具箱：Button / Label / Slider / Container + 布局 + 事件路由 | 待启动 |
 | **P4** | 桌面迁入仓库：CinuxOS `kernel/gui/` 的 WM/terminal/desktop 搬上表、host-neutral；CinuxOS 只剩 `host_cinux` | 待启动 |
 | **P5** | 字体/文本（PSF → 更全）、主题 | 待启动 |
