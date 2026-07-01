@@ -73,6 +73,15 @@ public:
     /** Receive a pointer event routed to this widget. Default: noop. */
     virtual void on_pointer(const PointerPayload& p) { (void)p; }
 
+    /**
+     * @brief Recompute children's rects (containers override; P3-c)
+     *
+     * Default noop. Containers (HBox/VBox) position their children within this
+     * rect and call layout() on each so nested containers settle. Desktop::render
+     * calls root->layout() before paint.
+     */
+    virtual void layout() {}
+
 protected:
     /** Subclass drawing (clip already set to this widget's rect). Default: noop. */
     virtual void paint_to_list(PaintList& list) const { (void)list; }

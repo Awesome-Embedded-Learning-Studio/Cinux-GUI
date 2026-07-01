@@ -44,6 +44,9 @@ add_library(cinux-gui STATIC
     core/swraster.cpp
     core/theme.cpp
     core/widget.cpp
+    core/widget/button.cpp
+    core/widget/container.cpp
+    core/widget/label.cpp
     core/abi_check.cpp
 )
 # core/ is PUBLIC so consumers (a host adapter, the harness) resolve the bare
@@ -101,6 +104,11 @@ if(CINUX_GUI_STANDALONE)
     add_executable(theme-test test/test_theme.cpp)
     target_link_libraries(theme-test PRIVATE cinux-gui)
     add_test(NAME theme-test COMMAND theme-test)
+
+    # P3-c: basic widgets (Label/Button/Container) + HBox/VBox layout.
+    add_executable(widgets-test test/test_widgets.cpp)
+    target_link_libraries(widgets-test PRIVATE cinux-gui)
+    add_test(NAME widgets-test COMMAND widgets-test)
 
     # P1 Probe-1: real Linux fbdev+evdev host. Manual smoke under QEMU only
     # (needs /dev/fb0 + /dev/input/event*); NOT a ctest.

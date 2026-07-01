@@ -84,8 +84,8 @@
 |---|---|---|---|---|
 | **P3-a** | 控件模型 + PaintList + 事件路由：Widget 基类（rect/children/hit_test/on_pointer/paint_to_list）+ PaintList（原语序列 fill_rect/text/clip）+ Desktop（dispatch + render）+ Compositor::execute(PaintList) | ✅ | — | 新 test_widget：hit-test 命中 + dispatch + PaintList→像素 |
 | **P3-b** | swraster 圆角 + Material Theme：`fill_rounded_rect`（整数 isqrt 逐行角弧）+ `core/theme.*`（Material 配色 primary/surface/on-surface + 圆角半径 + 8dp 网格）+ execute 转真圆角 | ✅ | — | 圆角像素（角不溢出）+ theme 配色 + radius0/clamp |
-| **P3-c** | 基础控件 + 布局：Label / Button（down/hover/press 状态）/ Container + HBox/VBox | 🔜 NEXT | — | 控件 paint + 布局几何 + Button press |
-| **P3-d** | Slider + host demo + P2 Scene 退役：Slider（拖动取值）+ replay/fbdev 控件 demo（Material 外观）+ 三 host 切控件树、Scene 退役 | ⏳ | — | ctest + ASAN + QEMU 冒烟（像素眼检 Material） |
+| **P3-c** | 基础控件 + 布局：Label / Button（down/hover/press 状态）/ Container + HBox/VBox + Widget::layout hook | ✅ | — | widgets-test：Label/Button rest-press/HBox/VBox 几何/desktop |
+| **P3-d** | Slider + host demo + P2 Scene 退役：Slider（拖动取值）+ replay/fbdev 控件 demo（Material 外观）+ 三 host 切控件树、Scene 退役 | 🔜 NEXT | — | ctest + ASAN + QEMU 冒烟（像素眼检 Material） |
 
 ## 验证哲学
 
