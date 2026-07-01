@@ -36,11 +36,13 @@ void Window::layout() {
 }
 
 void Window::move_to_(int32_t x, int32_t y) {
-    const uint32_t w = rect_.width();
-    const uint32_t h = rect_.height();
+    const uint32_t w   = rect_.width();
+    const uint32_t h   = rect_.height();
+    const Rect     old = rect_;
     set_rect(x, y, w, h);
-    layout();      // reposition content into the new rect
-    invalidate();  // P5-c: window moved
+    layout();         // reposition content into the new rect
+    invalidate(old);  // P5-f: old footprint (bg restore)
+    invalidate();     // new footprint
 }
 
 bool Window::in_title_bar_(int32_t x, int32_t y) const {

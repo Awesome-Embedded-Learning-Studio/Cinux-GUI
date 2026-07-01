@@ -59,7 +59,8 @@ void compose(Surface& staging, const Scene& scene, const PsfFont& font);
  * @param list     flattened draw cmds (from Widget::flatten)
  * @param font     PSF2 font for text cmds
  */
-void execute(Surface& staging, const PaintList& list, const PsfFont& font);
+void execute(Surface& staging, const PaintList& list, const PsfFont& font,
+             const ClipRect* outer = nullptr);
 
 /**
  * @brief [P2-c] Stateful compositor with frame-to-frame dirty diff

@@ -80,20 +80,32 @@ void Desktop::dispatch_pointer(const PointerPayload& p) {
 }
 
 void Desktop::render(Surface& staging, const PsfFont& font, Region* dirty) {
-    if (dirty != nullptr) {
-        dirty->clear();
+    Region  local;
+    Region* d = (dirty != nullptr) ? dirty : &local;
+    d->clear();
+    if (root_ == nullptr) {
+        return;
     }
-    if (root_ == nullptr || !root_->is_dirty()) {
-        return;  // P5-c: idle -- nothing changed, 0 rects -> pump flushes nothing
+    const Rect full{0, 0, static_cast<int32_t>(staging.width),
+                    static_cast<int32_t>(staging.height)};
+    if (first_) {
+        d->add(full);  // P5-f: first frame paints everything
+        first_ = false;
+    } else {
+        root_->collect_dirty(*d);  // P5-f: per-widget dirty rects
     }
-    root_->clear_dirty();  // reset before paint (paint only draws, no invalidate)
-    root_->layout();       // position children within their parent's rect
+    if (d->empty()) {
+        return;  // idle -> 0 rects -> pump flushes nothing
+    }
+    root_->clear_dirty();
+    root_->layout();
     PaintList list;
     root_->flatten(list);
-    execute(staging, list, font);
-    if (dirty != nullptr) {
-        dirty->add(
-            Rect{0, 0, static_cast<int32_t>(staging.width), static_cast<int32_t>(staging.height)});
+    const uint32_t n = d->count();
+    for (uint32_t i = 0u; i < n; ++i) {  // repaint each dirty rect, clipped to it
+        const Rect&    r = d->rects()[i];
+        const ClipRect clip{r.x0, r.y0, r.x1, r.y1};
+        execute(staging, list, font, &clip);
     }
 }
 

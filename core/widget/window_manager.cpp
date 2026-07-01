@@ -79,15 +79,22 @@ Widget* WindowManager::hit_test(int32_t x, int32_t y) {
 }
 
 void WindowManager::process_pointer(const PointerPayload& p) {
-    cursor_x_ = p.x;
-    cursor_y_ = p.y;
-    invalidate();  // P5-c: cursor moved and/or Z-order changed -> repaint
+    const int32_t old_cx = cursor_x_;
+    const int32_t old_cy = cursor_y_;
+    cursor_x_            = p.x;
+    cursor_y_            = p.y;
+    /* P5-f: only the cursor's old + new footprint, not the whole desktop. */
+    invalidate(Rect{old_cx, old_cy, old_cx + static_cast<int32_t>(kCursorSize),
+                    old_cy + static_cast<int32_t>(kCursorSize)});
+    invalidate(Rect{cursor_x_, cursor_y_, cursor_x_ + static_cast<int32_t>(kCursorSize),
+                    cursor_y_ + static_cast<int32_t>(kCursorSize)});
 
     if (p.kind == kPointerKindDown) {
         press_target_ = static_cast<Window*>(hit_test(p.x, p.y));
         if (press_target_ != nullptr) {
-            raise(press_target_);          // click-to-raise
-            press_target_->on_pointer(p);  // arm close / begin drag
+            raise(press_target_);
+            invalidate(press_target_->rect());  // P5-f: Z-order changed -> repaint
+            press_target_->on_pointer(p);       // arm close / begin drag
         }
     } else if (p.kind == kPointerKindUp) {
         if (press_target_ != nullptr) {

@@ -37,7 +37,8 @@ void TerminalWidget::clear() {
     cur_fg_     = 7u;  // P5-e: default white
     ansi_state_ = AnsiState::kNormal;
     csi_len_    = 0u;
-    invalidate();  // P5-c: grid cleared
+    dirty_all_  = true;  // P5-f: whole grid dirty
+    invalidate();        // P5-c: grid cleared
 }
 
 char TerminalWidget::cell_at(uint32_t col, uint32_t row) const {
@@ -67,6 +68,8 @@ void TerminalWidget::scroll_up_() {
         cells_[(rows_ - 1) * kMaxCols + c]     = 0;
         fg_colors_[(rows_ - 1) * kMaxCols + c] = 0;
     }
+    dirty_all_  = true;  // P5-f: a scroll repaints the whole grid
+    dirty_self_ = true;
 }
 
 void TerminalWidget::newline_() {
@@ -230,9 +233,11 @@ void TerminalWidget::put_char_(char ch) {
     if (static_cast<uint8_t>(ch) < 0x20u) {
         return;  // other control bytes: drop
     }
-    const uint32_t idx = cur_row_ * kMaxCols + cur_col_;
-    cells_[idx]        = ch;
-    fg_colors_[idx]    = cur_fg_;  // P5-e: stamp the current SGR fg on this cell
+    const uint32_t idx    = cur_row_ * kMaxCols + cur_col_;
+    cells_[idx]           = ch;
+    fg_colors_[idx]       = cur_fg_;  // P5-e: stamp the current SGR fg on this cell
+    dirty_rows_[cur_row_] = true;     // P5-f: this row changed
+    dirty_self_           = true;
     ++cur_col_;
     if (cur_col_ >= cols_) {
         newline_();  // auto-wrap at the right edge
@@ -257,6 +262,34 @@ void TerminalWidget::write(const char* str) {
         put_char_(*p);
     }
     invalidate();  // P5-c: cells changed
+}
+
+void TerminalWidget::collect_dirty(Region& sink) const {
+    if (!dirty_self_) {
+        return;
+    }
+    if (dirty_all_) {
+        sink.add(rect_);  // scroll/clear -> whole grid
+        return;
+    }
+    /* P5-f: only the rows that actually changed (one kGlyphH-tall rect each). */
+    const int32_t y0 = rect_.y0;
+    const int32_t x0 = rect_.x0;
+    const int32_t x1 = rect_.x1;
+    for (uint32_t r = 0u; r < rows_; ++r) {
+        if (dirty_rows_[r]) {
+            const int32_t ry0 = y0 + static_cast<int32_t>(r * kGlyphH);
+            sink.add(Rect{x0, ry0, x1, ry0 + static_cast<int32_t>(kGlyphH)});
+        }
+    }
+}
+
+void TerminalWidget::clear_dirty() {
+    dirty_all_ = false;
+    for (uint32_t r = 0u; r < kMaxRows; ++r) {
+        dirty_rows_[r] = false;
+    }
+    Widget::clear_dirty();  // dirty_self_ + children
 }
 
 void TerminalWidget::paint_to_list(PaintList& list) const {

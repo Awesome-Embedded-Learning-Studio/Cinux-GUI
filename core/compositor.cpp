@@ -191,14 +191,18 @@ void Compositor::compose(Surface& staging, const Scene& scene, const PsfFont& fo
     first_ = false;
 }
 
-void execute(Surface& staging, const PaintList& list, const PsfFont& font) {
+void execute(Surface& staging, const PaintList& list, const PsfFont& font, const ClipRect* outer) {
     /* Clip stack: each kClipPush intersects with its parent, so a widget can
      * never paint outside its ancestors' rects. top == -1 means unclipped
-     * (primitives clip to the surface bounds only, via nullptr). */
+     * (primitives clip to the surface bounds only, via nullptr). @p outer (P5-f)
+     * is an optional base clip -- a dirty rect limits the whole repaint to it. */
     constexpr uint32_t kMaxClip = 32;
     ClipRect           stack[kMaxClip];
     int32_t            top = -1;
-    const auto         cur = [&]() -> const ClipRect* { return top >= 0 ? &stack[top] : nullptr; };
+    if (outer != nullptr) {
+        stack[++top] = *outer;  // P5-f: base clip (dirty rect)
+    }
+    const auto cur = [&]() -> const ClipRect* { return top >= 0 ? &stack[top] : nullptr; };
 
     const uint32_t n = list.count();
     for (uint32_t i = 0u; i < n; i++) {

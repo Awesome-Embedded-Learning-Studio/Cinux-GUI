@@ -61,6 +61,8 @@ public:
 
 protected:
     void paint_to_list(PaintList& list) const override;
+    void collect_dirty(Region& sink) const override;  // P5-f: per-row dirty rects
+    void clear_dirty() override;                      // P5-f: reset row flags
 
 private:
     /* ANSI/VT100 escape consumer. P4-c swallowed sequences whole; P5-e parses
@@ -75,7 +77,9 @@ private:
     void apply_sgr_();                    // P5-e: parse csi_param_ SGR codes -> cur_fg_
 
     char         cells_[kMaxCols * kMaxRows]     = {};
-    uint8_t      fg_colors_[kMaxCols * kMaxRows] = {};  // P5-e: per-cell fg (0-15)
+    uint8_t      fg_colors_[kMaxCols * kMaxRows] = {};     // P5-e: per-cell fg (0-15)
+    bool         dirty_rows_[kMaxRows]           = {};     // P5-f: per-row dirty
+    bool         dirty_all_                      = false;  // P5-f: whole-grid dirty
     uint32_t     cols_                           = kDefaultCols;
     uint32_t     rows_                           = kDefaultRows;
     uint32_t     cur_col_                        = 0;

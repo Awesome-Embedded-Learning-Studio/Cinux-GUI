@@ -102,9 +102,9 @@
 
 ### Follow-up：Scene 退役 / desktop icon / per-widget dirty（P4 后，迟早做）
 
-- **Scene 退役推迟**：P4-e fbdev 切控件树，但 Scene **保留**（offscreen/replay host + `test_scene`/`test_compositor` 作 P0/P2 回归基线 + 验证 P2-c 帧间 diff 脏区纪律；控件树是 P3-a 全屏 dirty，无等价帧间 diff）。待 per-widget dirty + 帧间 diff 落地后再退役。
+- **Scene 退役**：P5-f per-widget dirty 落地（控件树有等价帧间 diff）→ 前提达成。剩 offscreen/replay host 迁控件树后即可删 Scene（仍保留作 P0/P2 回归基线 + 脏区纪律验证）。
 - **desktop icon**：P4-e 暂跳（低价值装饰），留后续。
-- **per-widget dirty + 帧间 diff**：P3-a/P4 全屏 dirty，局部 dirty 留优化批（落地后 Scene 可退役）。
+- **per-widget dirty**：✅ **P5-f 落地**（collect/per-row + execute-clip + host per-rect upload；Window move old+new 露背景已含）。控件树有等价帧间 diff → Scene 退役前提达成（仅剩 offscreen/replay 迁移）。
 - **QEMU 真 evdev→WM 冒烟**：fbdev-host widget-tree edition 手动冒烟（`timeout 40 ./fbdev-host`，自构建 kernel+initramfs，VNC 眼检）。控件逻辑已被 window-test/window-manager-test 单测覆盖。
 
 ## 批表（P5 增强 · 字体/主题/dirty/flex/ANSI）🔄
@@ -117,7 +117,8 @@
 | **P5-b** | 主题配色变体（primary_container/on_primary_container/surface_variant，M3 值）+ sdl-host 按 T 运行时切 light/dark | ✅ | — | theme-test 段 6（变体断言）+ sdl-host 编译（T 键眼检） |
 | **P5-c** | per-widget dirty（invalidate 传播 root）+ Desktop.render idle（root 不脏 → 0 rect 0 flush）；set_rect 不 invalidate（layout 内部），控件状态变化显式 invalidate。局部 dirty（只刷脏区）留后续 | ✅ | — | dirty-test（idle 0 + 交互 dirty）+ ctest 17/17 零回归 |
 | **P5-d** | HBox/VBox flex 权重（set_flex，last 拿余数）+ swraster per-corner 圆角（kCorner 位掩码）+ Window 标题栏顶圆（TL+TR） | ✅ | — | flex-test（3:1/等分/per-corner 像素）+ widgets-test 适配 |
-| **P5-e** | 终端 ANSI 彩色渲染（SGR 16 色 fg/bg + 光标定位/清屏执行，TerminalWidget cells 加 color 属性） | ✅ | — | terminal-ansi-test（SGR/光标/清屏 5 断言） |（颜色/光标/清屏） |
+| **P5-e** | 终端 ANSI 彩色渲染（SGR 16 色 fg/bg + 光标定位/清屏执行，TerminalWidget cells 加 color 属性） | ✅ | — | terminal-ansi-test（SGR/光标/清屏 5 断言） |
+| **P5-f** | per-widget 局部 dirty（P5-c idle 之上深一步）：Widget dirty_rect_+collect_dirty+invalidate(rect) / TerminalWidget per-row / Desktop.render collect+execute clip 脏区 / compositor execute outer clip / terminal-host per-rect SDL_UpdateTexture（砍 upload 量 90%+） | ✅ | — | ctest 19/19 + ASAN（terminal-host 性能眼检） |
 
 ## 验证哲学
 

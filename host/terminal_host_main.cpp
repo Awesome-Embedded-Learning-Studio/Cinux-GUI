@@ -182,8 +182,13 @@ int main() {
 
         Region dirty;
         desktop.render(staging, font, &dirty);
-        if (dirty.count() > 0u) {  // P5-c: skip the costly upload when idle
-            SDL_UpdateTexture(tex, nullptr, buf, static_cast<int>(kW) * 4);
+        if (dirty.count() > 0u) {  // P5-f: upload only the dirty rects
+            const uint32_t pitch = kW * 4u;
+            for (uint32_t i = 0u; i < dirty.count(); ++i) {
+                const Rect&    r = dirty.rects()[i];
+                const SDL_Rect sr{r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0};
+                SDL_UpdateTexture(tex, &sr, buf + r.y0 * pitch + r.x0 * 4u, pitch);
+            }
             SDL_RenderClear(ren);
             SDL_RenderCopy(ren, tex, nullptr, nullptr);
             SDL_RenderPresent(ren);
