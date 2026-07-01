@@ -1,12 +1,15 @@
 /**
  * @file test/test_compositor.cpp
- * @brief Compositor unit test -- Scene -> pixels via swraster (P2-b)
+ * @brief Compositor unit test -- Scene -> pixels (P2-b) + dirty diff (P2-c)
  *
- * Builds the SAME scene the offscreen host paints by hand (window + title bar
- * + text + cursor) and verifies compose() reproduces it at the structural
- * sample points -- the zero-regression proof that P2-b converges the three
- * hosts' paint without changing what reaches the screen. Also covers z-order,
- * the empty scene, and the no-titlebar case.
+ * P2-b: builds the SAME scene the offscreen host paints by hand and verifies
+ * compose() reproduces it at the structural sample points (zero-regression),
+ * plus z-order, the empty scene, and the no-titlebar case.
+ *
+ * P2-c: drives the stateful Compositor class across frames and asserts dirty-
+ * region discipline -- first frame full screen, identical frame idle, a moved
+ * cursor/window dirties only old∪new (area < full) AND repaints correctly
+ * (new footprint painted, old footprint exposed back to background).
  */
 
 #include <cstdint>
@@ -14,6 +17,7 @@
 
 #include "compositor.hpp"
 #include "font.hpp"
+#include "region.hpp"
 #include "scene.hpp"
 #include "swraster.hpp"
 
@@ -31,6 +35,7 @@ using namespace cinux::gui;
 namespace {
 
 constexpr uint32_t kW = 320, kH = 240;
+constexpr uint64_t kFullScreen = static_cast<uint64_t>(kW) * kH;
 
 // Palette identical to offscreen_host_main (zero-regression baseline).
 constexpr uint32_t kBg        = 0x0018182Au;
@@ -76,12 +81,33 @@ Scene offscreen_scene() {
     return sc;
 }
 
+bool region_contains(const Region& reg, int32_t x, int32_t y) {
+    const uint32_t n = reg.count();
+    for (uint32_t i = 0u; i < n; i++) {
+        if (reg.rects()[i].contains(x, y)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+uint64_t region_area(const Region& reg) {
+    uint64_t       a = 0;
+    const uint32_t n = reg.count();
+    for (uint32_t i = 0u; i < n; i++) {
+        a += static_cast<uint64_t>(reg.rects()[i].width()) * reg.rects()[i].height();
+    }
+    return a;
+}
+
 }  // namespace
 
 int main() {
     PsfFont font;
     font.init();
     CHECK(font.ready(), "font not ready");
+
+    // ===== P2-b: stateless full-scene paint =====
 
     // 1. zero-regression vs the offscreen host's hand-written paint
     {
@@ -98,7 +124,6 @@ int main() {
         CHECK(tb == kTitleBar, "titlebar-centre 0x%08X expected 0x%08X", tb, kTitleBar);
         const uint32_t cp = px[144 * ppr + 180];
         CHECK(cp == kCursor, "cursor pixel 0x%08X expected 0x%08X", cp, kCursor);
-        // a corner away from any window/cursor stays background
         CHECK(px[(kH - 1) * ppr + (kW - 1)] == kBg, "far corner not bg");
     }
 
@@ -138,8 +163,7 @@ int main() {
               "empty scene not all-bg");
     }
 
-    // 4. titlebar_height == 0 -> no title band; window top inside the edge is
-    //    the face colour (not a title bar)
+    // 4. titlebar_height == 0 -> no title band; window top inside the edge is face
     {
         Stage st;
         Scene sc{};
@@ -158,6 +182,86 @@ int main() {
         CHECK(px[12 * kW + 50] == kWinFace, "no-titlebar top inside edge should be face");
     }
 
-    std::printf("compositor-test: OK (zero-regression/z-order/empty/no-titlebar)\n");
+    // ===== P2-c: stateful dirty diff =====
+
+    // 5. first frame -> full-screen dirty, pixels correct
+    {
+        Stage      st;
+        Scene      sc = offscreen_scene();
+        Compositor comp;
+        Region     dirty;
+        comp.compose(st.s, sc, font, &dirty);
+        CHECK(region_area(dirty) >= kFullScreen, "first frame should dirty full screen");
+        const uint32_t* px = st.px();
+        CHECK(px[(40 + 80) * kW + (60 + 100)] == kWinFace, "first-frame window pixel wrong");
+    }
+
+    // 6. identical frame -> idle (empty dirty, nothing to repaint)
+    {
+        Stage      st;
+        Scene      sc = offscreen_scene();
+        Compositor comp;
+        Region     dirty;
+        comp.compose(st.s, sc, font, &dirty);  // first frame
+        dirty.clear();
+        comp.compose(st.s, sc, font, &dirty);  // identical
+        CHECK(dirty.count() == 0u, "identical frame should be idle, dirty=%u", dirty.count());
+    }
+
+    // 7. cursor move -> dirty is old∪new cursor (area < full); new cursor painted
+    {
+        Stage      st;
+        Scene      sc = offscreen_scene();
+        Compositor comp;
+        Region     dirty;
+        comp.compose(st.s, sc, font, &dirty);  // first frame
+        sc.cursor.x = 200;
+        sc.cursor.y = 160;
+        dirty.clear();
+        comp.compose(st.s, sc, font, &dirty);
+        CHECK(region_area(dirty) < kFullScreen, "cursor move should dirty < full screen");
+        CHECK(region_contains(dirty, 200, 160), "new cursor not in dirty");
+        CHECK(region_contains(dirty, 180, 144), "old cursor not in dirty");
+        const uint32_t* px = st.px();
+        CHECK(px[160 * kW + 200] == kCursor, "new cursor pixel not painted");
+    }
+
+    // 8. window move -> dirty old∪new (< full); new footprint painted, old
+    //    footprint exposed back to background
+    {
+        Stage      st;
+        Scene      sc = offscreen_scene();
+        Compositor comp;
+        Region     dirty;
+        comp.compose(st.s, sc, font, &dirty);  // first frame
+        sc.windows[0].x = 120;
+        sc.windows[0].y = 44;
+        dirty.clear();
+        comp.compose(st.s, sc, font, &dirty);
+        CHECK(region_area(dirty) < kFullScreen, "window move should dirty < full");
+        const uint32_t* px = st.px();
+        // new window centre painted with face
+        CHECK(px[(44 + 80) * kW + (120 + 100)] == kWinFace, "moved window centre not face");
+        // a point in the OLD footprint but OUTSIDE the new window -> bg exposed
+        CHECK(px[42 * kW + 62] == kBg, "old footprint should expose bg, got 0x%08X",
+              px[42 * kW + 62]);
+    }
+
+    // 9. background colour change -> full-screen dirty
+    {
+        Stage      st;
+        Scene      sc = offscreen_scene();
+        Compositor comp;
+        Region     dirty;
+        comp.compose(st.s, sc, font, &dirty);  // first frame
+        sc.bg_color = 0x00FFFFFFu;
+        dirty.clear();
+        comp.compose(st.s, sc, font, &dirty);
+        CHECK(region_area(dirty) >= kFullScreen, "bg change should dirty full screen");
+    }
+
+    std::printf(
+        "compositor-test: OK (zero-regression/z-order/empty/no-titlebar + dirty: "
+        "first/idle/cursor/window-move/bg)\n");
     return 0;
 }
