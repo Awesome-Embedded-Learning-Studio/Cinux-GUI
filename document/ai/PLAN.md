@@ -4,7 +4,8 @@
 > **P0 Probe-0 完成 ✅**：核心渲染管线 standalone 跑通——pump→core.staging→swraster→glyph_blit→flush，事件回放驱动拖拽，脏区纪律断言（idle 0 / 首帧全屏 / 后续局部）。3 个 ctest（smoke + offscreen + replay）全绿 + ASAN 干净。
 > **P1 Probe-1 完成 ✅**：fbdev+evdev 真 host（`host/linux_fbdev_main.cpp`）+ evdev accumulator 单测（`test/test_evdev.cpp`，4 ctest 绿 + ASAN）+ **真 QEMU 冒烟 PASS**（自构建 x86_64 kernel + busybox initramfs，`fb0:bochs-drmdrmfb` + usb-tablet + fbdev-host 跑满 40s 不崩，像素采样验场景画对）。core 一行没动，只换 host 表——解耦缝证毕。详见 `document/notes/2026-06-30-p1-probe1-fbdev-host.md`。
 > **P2 渲染收敛核心 ✅ 完成**：host-neutral **Scene（数据）+ Compositor（渲染器）** 收敛三 host 重复画法 + frame-to-frame dirty diff（只 composite 变化区，省 CPU 不止省 flush）。三 host 已切 Compositor，fbdev QEMU 冒烟 PASS（像素眼检无误）。**Host ABI 零改动**（CinuxOS 不 bump pin）。4 批 a/b/c/d 详见批表 + 笔记 `notes/2026-07-01-p2-*.md`。
-> **P3 控件工具箱 🔄 启动中**：Widget 树 + 布局 + 事件路由 + **Material 风格**（纯整数 flat 子集：配色 + 圆角 + 色差层次，**无**波纹/动效）。**控件树 PaintList 取代 P2 Scene** 作场景源。Label/Button/Slider/Container + HBox/VBox。CinuxOS 零改动。批表见下。
+> **P3 控件工具箱 ✅ 完成**：Widget 树 + PaintList + 事件路由 + Material flat Theme（圆角/配色）+ Label/Button/Slider/Container/HBox/VBox + press capture；widgets-host（SDL2）demo Material 端到端（ctest + 像素眼检）。**Host ABI 零改动**。4 批 a/b/c/d 见下 + 笔记。
+> **P4 桌面迁入 🔄 启动中**：路 A——本仓 P3 控件框架上**重建** CinuxOS WM/Window/Terminal 桌面语义（CinuxOS 代码作参考、不搬不引）；terminal IO 走 PTY fork+exec；CinuxOS **暂不删** `kernel/gui/`（只 pin 新本仓，删码留后续）。批表见下。
 
 ## 现状速览（我们站在哪）
 
@@ -76,20 +77,32 @@
 | **P2-c** | 帧间 dirty diff（Compositor 持 prev Scene，只 composite 变化区，返回 dirty Region） | ✅ | `4310e64` | compositor-test dirty 段：首帧全屏 / idle / cursor 移 / window 移（+露 bg）/ bg 变 |
 | **P2-d** | 三 host 切 Compositor + fbdev QEMU 冒烟验无回归 | ✅ | `59aa964` | ctest 全绿 + ASAN + QEMU 冒烟 PASS（像素眼检无误） |
 
-## 批表（P3 控件工具箱 · Material 风格）
+## 批表（P3 控件工具箱 · Material 风格）✅
 
 > 决策点已定（用户拍板）：① **控件树 PaintList 取代 P2 Scene** 作场景源（干净但要迁移三 host，长痛不如短痛）② **flat Material 首批**：配色 + 圆角 + 色差层次（不用 blur 阴影）；**不做**波纹/动画/过渡（纯整数算不起，留 P5+ 动画系统）③ 布局 HBox/VBox 线性首批（padding/margin/align，不做 flex）；事件 hit-test **点谁谁处理**（不冒泡）。**Host ABI 零改动，CinuxOS 不 bump pin**。
 
 | 批 | 范围 | 状态 | commit | 测试 |
 |---|---|---|---|---|
-| **P3-a** | 控件模型 + PaintList + 事件路由：Widget 基类（rect/children/hit_test/on_pointer/paint_to_list）+ PaintList（原语序列 fill_rect/text/clip）+ Desktop（dispatch + render）+ Compositor::execute(PaintList) | ✅ | — | 新 test_widget：hit-test 命中 + dispatch + PaintList→像素 |
-| **P3-b** | swraster 圆角 + Material Theme：`fill_rounded_rect`（整数 isqrt 逐行角弧）+ `core/theme.*`（Material 配色 primary/surface/on-surface + 圆角半径 + 8dp 网格）+ execute 转真圆角 | ✅ | — | 圆角像素（角不溢出）+ theme 配色 + radius0/clamp |
-| **P3-c** | 基础控件 + 布局：Label / Button（down/hover/press 状态）/ Container + HBox/VBox + Widget::layout hook | ✅ | — | widgets-test：Label/Button rest-press/HBox/VBox 几何/desktop |
-| **P3-d** | Slider + Desktop press capture + widgets demo host（Slider 拖动取值 + 圆 thumb；press capture 拖动跟手；widgets-host Material 控件树端到端 ctest + 像素眼检） | ✅ | — | slider-test + widgets-dump（ctest 11/11 + ASAN + 像素眼检 Material） |
+| **P3-a** | 控件模型 + PaintList + 事件路由：Widget 基类（rect/children/hit_test/on_pointer/paint_to_list）+ PaintList（原语序列 fill_rect/text/clip）+ Desktop（dispatch + render）+ Compositor::execute(PaintList) | ✅ | `ef11d19` | 新 test_widget：hit-test 命中 + dispatch + PaintList→像素 |
+| **P3-b** | swraster 圆角 + Material Theme：`fill_rounded_rect`（整数 isqrt 逐行角弧）+ `core/theme.*`（Material 配色 primary/surface/on-surface + 圆角半径 + 8dp 网格）+ execute 转真圆角 | ✅ | `b89d8fb` | 圆角像素（角不溢出）+ theme 配色 + radius0/clamp |
+| **P3-c** | 基础控件 + 布局：Label / Button（down/hover/press 状态）/ Container + HBox/VBox + Widget::layout hook | ✅ | `d1729ba` | widgets-test：Label/Button rest-press/HBox/VBox 几何/desktop |
+| **P3-d** | Slider + Desktop press capture + widgets demo host（Slider 拖动取值 + 圆 thumb；press capture 拖动跟手；widgets-host Material 控件树端到端 ctest + 像素眼检） | ✅ | `30a8114`+`137e5bc` | slider-test + widgets-dump（ctest 11/11 + ASAN + 像素眼检 Material） |
 
-### Follow-up：fbdev 控件化 + Scene 退役（P3 后,迟早做,非阻塞）
+## 批表（P4 桌面迁入 · 路 A Widget 重建）🔄
 
-fbdev host 切控件树（重写 `linux_fbdev_main` 经 Desktop + 控件树,替代 P2 Scene 路径）+ QEMU 冒烟验真 evdev → Desktop 全链路;P2 `core/scene.*` + `compose(Scene)` 在确认无 P4+ 引用后退役。**暂缓理由**:widgets-host ctest + 像素眼检 + slider/widgets-test 已完整证明控件层;fbdev 真跑是集成验证,P4 桌面迁入时 fbdev 自然控件化。同 CI-P2 模式。
+> 决策点已定（用户拍板）：① **路 A**——本仓 P3 控件框架上**重建** CinuxOS WM/Window/Terminal 桌面语义（Window=复合 Widget：标题栏 HBox[Label + 关闭 Button] + 内容 Container；WM=Desktop 上层管 Z 序/click-to-raise/拖动/关闭）；CinuxOS `kernel/gui/` 代码仅作设计参考、**不搬不引**（其 Canvas-based 模型与 P3 Widget 框架两套世界，搬来长期冲突）。② **terminal IO = PTY fork+exec**：Linux host fork `/bin/sh` + 伪终端（raw/curses 可用），**首实装 `HostDesktop::spawn`**。③ **CinuxOS 暂不删 `kernel/gui/`**——P4 全在本仓重建，CinuxOS 仅在 Host ABI 变更时 bump pin；旧 kernel/gui/ 留对照，删码留后续里程碑（零删除风险，P4 纯加法）。④ dirty 先沿用 P3-a **全屏**（per-widget dirty flags + cursor footprint 留优化批），cursor 带简单软件光标。**Host ABI 目标零改动**（P4-d 首实装已定义的 spawn 回调，若 PTY 需扩签名才 bump pin）。
+
+| 批 | 范围 | 状态 | commit | 测试 |
+|---|---|---|---|---|
+| **P4-a** | `Window` 复合控件（标题栏自画：色带 + 标题文字 + 关闭键；圆角 body + content 子控件）+ 标题栏拖拽 + 关闭回调（hit_test/on_pointer 自管，非 HBox —— P3 HBox 等分限制） | ✅ | — | 新 test_window：标题栏 hit-test / 几何 / 拖拽 / 关闭（6 断言绿） |
+| **P4-b** | `WindowManager`（Z 序栈 / click-to-raise / 标题栏拖动移窗 / 关闭销毁）住 Desktop 上层 + 简单软件 cursor | 🔜 NEXT | — | wm-test：Z 序 / raise / 拖拽几何 / 关闭销毁 |
+| **P4-c** | `TerminalWidget`（80×25 字符缓冲 + cursor + 换行/滚动 + 渲染到 PaintList），IO 先注桩（不接 shell） | 🔜 | — | terminal-test：写字 / cursor / 换行滚动 / 像素 |
+| **P4-d** | Terminal IO + 首实装 `HostDesktop::spawn`（Linux host fork+exec `/bin/sh` + PTY）+ terminal-host 真 shell 交互 | 🔜 | — | TerminalIo 注入 ctest + terminal-host 眼检真 shell |
+| **P4-e** | fbdev host 切控件树（替 P2 Scene 路径）+ `core/scene.*` / `compose(Scene)` 退役（确认无引用）+ desktop icon constexpr 数据 | 🔜 | — | fbdev QEMU 真 evdev→WM 全链路冒烟 + Scene 退役零回归 ctest |
+
+### Follow-up：fbdev 控件化 + Scene 退役 → 已并入 P4-e
+
+（原 P3 follow-up）fbdev host 切控件树 + `core/scene.*` / `compose(Scene)` 退役，已吸收进 **P4-e** 批（见上 P4 批表）。P4 桌面迁入时 fbdev 自然控件化，届时一并清退 P2 Scene。
 
 ## 验证哲学
 
