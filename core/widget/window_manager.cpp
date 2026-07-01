@@ -123,4 +123,16 @@ void WindowManager::paint_to_list(PaintList& list) const {
     }
 }
 
+void WindowManager::collect_dirty(Region& sink) const {
+    if (dirty_self_) {
+        sink.add(dirty_rect_);
+    }
+    /* P5-f: windows_ live in their own array (P4-b), NOT in children_ -- recurse
+     * them explicitly, same shape as paint_to_list. Without this a Window's
+     * (and its content TerminalWidget's) dirty rects never reach the host. */
+    for (uint32_t i = 0u; i < count_; ++i) {
+        windows_[i]->collect_dirty(sink);
+    }
+}
+
 }  // namespace cinux::gui

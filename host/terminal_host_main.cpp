@@ -147,23 +147,43 @@ int main() {
                 p.buttons = 0u;
                 wm.process_pointer(p);
             } else if (e.type == SDL_KEYDOWN) {
-                char ch = 0;
+                /* Control/edit keys send their terminal byte sequence directly
+                 * (printables arrive via SDL_TEXTINPUT). Backspace = DEL (0x7f),
+                 * the PTY's VERASE; arrows / Home / End send ANSI cursor keys so
+                 * shell line-editing + history work. */
                 switch (e.key.keysym.sym) {
                     case SDLK_RETURN:
-                        ch = '\n';
+                        pty_write(in_fd, "\n", 1);
                         break;
                     case SDLK_BACKSPACE:
-                    case SDLK_DELETE:
-                        ch = '\b';
+                    case SDLK_DELETE: {
+                        const char d = 0x7f;
+                        pty_write(in_fd, &d, 1);
                         break;
+                    }
                     case SDLK_TAB:
-                        ch = '\t';
+                        pty_write(in_fd, "\t", 1);
+                        break;
+                    case SDLK_UP:
+                        pty_write(in_fd, "\x1b[A", 3);
+                        break;
+                    case SDLK_DOWN:
+                        pty_write(in_fd, "\x1b[B", 3);
+                        break;
+                    case SDLK_RIGHT:
+                        pty_write(in_fd, "\x1b[C", 3);
+                        break;
+                    case SDLK_LEFT:
+                        pty_write(in_fd, "\x1b[D", 3);
+                        break;
+                    case SDLK_HOME:
+                        pty_write(in_fd, "\x1b[H", 3);
+                        break;
+                    case SDLK_END:
+                        pty_write(in_fd, "\x1b[F", 3);
                         break;
                     default:
                         break;
-                }
-                if (ch != 0) {
-                    pty_write(in_fd, &ch, 1);
                 }
             } else if (e.type == SDL_TEXTINPUT) {
                 pty_write(in_fd, e.text.text, strlen(e.text.text));

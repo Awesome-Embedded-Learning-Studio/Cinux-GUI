@@ -219,6 +219,14 @@ void TerminalWidget::put_char_(char ch) {
         case '\b':
             if (cur_col_ > 0) {
                 --cur_col_;
+                /* Erase the cell (not just move the cursor): a backspace must
+                 * remove the glyph even if the shell's erase echo is a lone \b
+                 * (ECHOE off) rather than the usual \b<space>\b. */
+                const uint32_t idx    = cur_row_ * kMaxCols + cur_col_;
+                cells_[idx]           = 0;
+                fg_colors_[idx]       = 0;
+                dirty_rows_[cur_row_] = true;
+                dirty_self_           = true;
             }
             return;
         case '\t':

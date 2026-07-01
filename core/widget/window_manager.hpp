@@ -77,6 +77,7 @@ public:
 
 protected:
     void    paint_to_list(PaintList& list) const override;
+    void    collect_dirty(Region& sink) const override;  // P5-f: recurse windows_ (not children_)
     Widget* hit_test(int32_t x, int32_t y) override;
 
 private:
