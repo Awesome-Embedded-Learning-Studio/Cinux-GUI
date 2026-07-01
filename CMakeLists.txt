@@ -51,6 +51,8 @@ add_library(cinux-gui STATIC
     core/widget/window.cpp
     core/widget/window_manager.cpp
     core/widget/terminal.cpp
+    core/widget/textbox.cpp
+    core/widget/checkbox.cpp
     core/abi_check.cpp
 )
 # core/ is PUBLIC so consumers (a host adapter, the harness) resolve the bare
@@ -113,6 +115,15 @@ if(CINUX_GUI_STANDALONE)
     add_executable(font-scale-test test/test_font_scale.cpp)
     target_link_libraries(font-scale-test PRIVATE cinux-gui)
     add_test(NAME font-scale-test COMMAND font-scale-test)
+
+    # P6-a: TextBox (keyboard input + cursor) + CheckBox (toggle).
+    add_executable(textbox-test test/test_textbox.cpp)
+    target_link_libraries(textbox-test PRIVATE cinux-gui)
+    add_test(NAME textbox-test COMMAND textbox-test)
+
+    add_executable(checkbox-test test/test_checkbox.cpp)
+    target_link_libraries(checkbox-test PRIVATE cinux-gui)
+    add_test(NAME checkbox-test COMMAND checkbox-test)
 
     # P5-c: per-widget dirty + Desktop::render idle skip.
     add_executable(dirty-test test/test_dirty.cpp)

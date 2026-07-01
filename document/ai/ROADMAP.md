@@ -24,8 +24,9 @@
 | **P3** | 控件工具箱：Button / Label / Slider / Container + 布局 + 事件路由 | ✅ 完成（4 批 a/b/c/d）：Widget 树 + PaintList + 事件路由 + 圆角/Material flat Theme + Label/Button/Slider/Container/HBox/VBox + press capture; widgets-host demo Material 端到端（ctest + 像素眼检）。fbdev 控件化 + Scene 退役作 follow-up。Host ABI 零改动 |
 | **P4** | 桌面迁入（路 A：Widget 重建）：本仓 P3 控件框架上重建 WM/Window/Terminal 桌面语义；terminal IO 走 PTY fork+exec；CinuxOS **暂不删** `kernel/gui/`（只 pin 新本仓，删码留后续） | ✅ 完成（5 批 a/b/c/d/e；ctest 15/15 + ASAN；Host ABI 零改动） |
 | **P5** | 增强：字体/文本（缩放渲染 + 测量）+ 主题运行时切换 + per-widget dirty + flex 布局/per-corner 圆角 + 终端 ANSI 彩色渲染 | ✅ 完成（5 批 a-e；ctest 19/19 + ASAN；Host ABI 零改动） |
-| **P6** | GPU texture compositor（有真 GPU 目标后；非 primitive draw-list） | 远期 |
-| **P7** | 多进程 Surface 协议（attach/damage/commit/release；ring-3 桌面 server） | 远期 |
+| **P6** | 桌面功能增强：TextBox/Checkbox 控件（+键盘路由）+ 窗口 resize/最大最小化 + 终端 ANSI bg/256 色 + Scene 退役 | 🔄 启动中（4 批 a-d） |
+| **P7** | GPU texture compositor（原 P6；有真 GPU 目标后；非 primitive draw-list） | 远期 |
+| **P8** | 多进程 Surface 协议（原 P7；attach/damage/commit/release；ring-3 桌面 server） | 远期 |
 | **MCU 线** | visor 嵌入式（STM32F1 等）：独立 micro renderer，推迟到真板 RAM<20KB 实测后 | 长弧推迟 |
 
 ## 两仓契约（Cinux-GUI ↔ CinuxOS）

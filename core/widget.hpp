@@ -76,6 +76,8 @@ public:
 
     /** Receive a pointer event routed to this widget. Default: noop. */
     virtual void on_pointer(const PointerPayload& p) { (void)p; }
+    /** Receive a keyboard event routed to this widget (P6-a). Default: noop. */
+    virtual void on_key(const KeycodePayload& k) { (void)k; }
 
     /**
      * @brief Recompute children's rects (containers override; P3-c)
@@ -141,6 +143,8 @@ public:
 
     /** Hit-test + deliver @p p to the target widget (no event bubbling). */
     void dispatch_pointer(const PointerPayload& p);
+    /** Deliver @p k to the focused widget (P6-a). Click sets focus (pointer down). */
+    void dispatch_key(const KeycodePayload& k);
 
     /**
      * @brief Flatten the tree + paint into @p staging
@@ -153,6 +157,7 @@ public:
 private:
     Widget* root_         = nullptr;
     Widget* press_target_ = nullptr;  // P3-d: press capture (drag tracks the press widget)
+    Widget* focus_        = nullptr;  // P6-a: keyboard focus (set on pointer down)
     bool    first_        = true;     // P5-f: paint full screen on frame 1
 };
 

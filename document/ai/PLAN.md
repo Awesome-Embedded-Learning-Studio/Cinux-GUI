@@ -120,6 +120,17 @@
 | **P5-e** | 终端 ANSI 彩色渲染（SGR 16 色 fg/bg + 光标定位/清屏执行，TerminalWidget cells 加 color 属性） | ✅ | — | terminal-ansi-test（SGR/光标/清屏 5 断言） |
 | **P5-f** | per-widget 局部 dirty（P5-c idle 之上深一步）：Widget dirty_rect_+collect_dirty+invalidate(rect) / TerminalWidget per-row / Desktop.render collect+execute clip 脏区 / compositor execute outer clip / terminal-host per-rect SDL_UpdateTexture（砍 upload 量 90%+） | ✅ | — | ctest 19/19 + ASAN（terminal-host 性能眼检） |
 
+## 批表（P6 桌面功能增强 · 控件/窗口/终端/Scene）🔄
+
+> 决策点（用户拍板"顺序梭哈"）：P6 四方向全做 —— 控件(TextBox/Checkbox)+ 窗口 resize + 终端 ANSI bg/256 + Scene 退役。4 批 a-d，逐批实现。**Host ABI 目标零改动**（CinuxOS 不 bump pin）。
+
+| 批 | 范围 | 状态 | commit | 测试 |
+|---|---|---|---|---|
+| **P6-a** | TextBox（键盘输入 + 光标）+ Checkbox(toggle) + Widget on_key/Desktop dispatch_key+focus 键盘路由 | ✅ | — | textbox-test + checkbox-test（ctest 21/21 + ASAN）；sdl-host 键盘 demo 留眼检 |
+| **P6-b** | 窗口 resize（边框 handle 拖调大小）+ 最大化/最小化/还原 | 🔜 NEXT | — | resize-test + 最大化几何 |
+| **P6-c** | 终端 ANSI bg(40-47) + 256 色(38;5;N) + 光标块(visible cursor) | 🔜 | — | terminal-bg256-test |
+| **P6-d** | Scene 退役（迁 offscreen/replay host 控件树 + 删 `core/scene.*` + compose(Scene) + test_scene/test_compositor） | 🔜 | — | 迁移零回归 + Scene 删后 ctest 绿 |
+
 ## 验证哲学
 
 - **能确定的，全部自动化进本仓 ctest**：渲染对不对 = 金帧对比；脏区对不对 = 断言 `flush` 了哪些 rect；崩不崩 / ASAN / UBSAN = 自动。

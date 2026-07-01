@@ -64,6 +64,7 @@ void Desktop::dispatch_pointer(const PointerPayload& p) {
          * so a drag stays tracked even when the pointer leaves it (Slider). */
         press_target_ = root_->hit_test(p.x, p.y);
         if (press_target_ != nullptr) {
+            focus_ = press_target_;  // P6-a: keyboard focus follows the click
             press_target_->on_pointer(p);
         }
     } else if (p.kind == kPointerKindUp) {
@@ -77,6 +78,12 @@ void Desktop::dispatch_pointer(const PointerPayload& p) {
         press_target_->on_pointer(p);
     }
     /* Move with no press_target is ignored -- P3 has no hover. */
+}
+
+void Desktop::dispatch_key(const KeycodePayload& k) {
+    if (focus_ != nullptr) {
+        focus_->on_key(k);  // P6-a: deliver to the focused widget
+    }
 }
 
 void Desktop::render(Surface& staging, const PsfFont& font, Region* dirty) {
