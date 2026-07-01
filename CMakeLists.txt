@@ -38,9 +38,16 @@ add_library(cinux-gui STATIC
     core/compositor.cpp
     core/font.cpp
     core/gui_core.cpp
+    core/paint_list.cpp
     core/region.cpp
     core/scene.cpp
     core/swraster.cpp
+    core/theme.cpp
+    core/widget.cpp
+    core/widget/button.cpp
+    core/widget/container.cpp
+    core/widget/label.cpp
+    core/widget/slider.cpp
     core/abi_check.cpp
 )
 # core/ is PUBLIC so consumers (a host adapter, the harness) resolve the bare
@@ -89,9 +96,47 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(compositor-test PRIVATE cinux-gui)
     add_test(NAME compositor-test COMMAND compositor-test)
 
+    # P3-a: widget tree unit test (hit-test + dispatch + flatten->PaintList->pixels).
+    add_executable(widget-test test/test_widget.cpp)
+    target_link_libraries(widget-test PRIVATE cinux-gui)
+    add_test(NAME widget-test COMMAND widget-test)
+
+    # P3-b: Material theme + rounded-rect rasteriser.
+    add_executable(theme-test test/test_theme.cpp)
+    target_link_libraries(theme-test PRIVATE cinux-gui)
+    add_test(NAME theme-test COMMAND theme-test)
+
+    # P3-c: basic widgets (Label/Button/Container) + HBox/VBox layout.
+    add_executable(widgets-test test/test_widgets.cpp)
+    target_link_libraries(widgets-test PRIVATE cinux-gui)
+    add_test(NAME widgets-test COMMAND widgets-test)
+
+    # P3-d: Slider widget (drag-to-value + press capture).
+    add_executable(slider-test test/test_slider.cpp)
+    target_link_libraries(slider-test PRIVATE cinux-gui)
+    add_test(NAME slider-test COMMAND slider-test)
+
+    # P3-d: widgets demo host (Material widget tree -> one PPM frame).
+    add_executable(widgets-dump host/widgets_host_main.cpp host/ppm_writer.cpp)
+    target_link_libraries(widgets-dump PRIVATE cinux-gui)
+    add_test(NAME widgets-dump COMMAND widgets-dump)
+
+    # P3 demo: rich Material widget frame (eyeball, not a test).
+    add_executable(demo-dump host/demo_host_main.cpp host/ppm_writer.cpp)
+    target_link_libraries(demo-dump PRIVATE cinux-gui)
+
     # P1 Probe-1: real Linux fbdev+evdev host. Manual smoke under QEMU only
     # (needs /dev/fb0 + /dev/input/event*); NOT a ctest.
     add_executable(fbdev-host host/linux_fbdev_main.cpp host/fbdev_device.cpp
                           host/evdev_device.cpp)
     target_link_libraries(fbdev-host PRIVATE cinux-gui)
+
+    # P3 demo: SDL2 interactive host (desktop window; opt-in, needs SDL2).
+    # Host layer only -- core never sees SDL.
+    option(CINUX_HOST_SDL "Build SDL2 interactive widget host (needs SDL2)" OFF)
+    if(CINUX_HOST_SDL)
+        find_package(SDL2 REQUIRED)
+        add_executable(sdl-host host/sdl_host_main.cpp)
+        target_link_libraries(sdl-host PRIVATE cinux-gui SDL2::SDL2)
+    endif()
 endif()
