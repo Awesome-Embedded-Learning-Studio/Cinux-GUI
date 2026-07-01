@@ -188,6 +188,11 @@ if(CINUX_GUI_STANDALONE)
     add_executable(demo-dump host/demo_host_main.cpp host/ppm_writer.cpp)
     target_link_libraries(demo-dump PRIVATE cinux-gui)
 
+    # P7 gallery: one frame of EVERY widget -> PPM (visual baseline; any host
+    # rendering this tree yields identical pixels -- core is host-neutral).
+    add_executable(gallery-dump host/gallery_dump_main.cpp host/ppm_writer.cpp)
+    target_link_libraries(gallery-dump PRIVATE cinux-gui)
+
     # P1 Probe-1: real Linux fbdev+evdev host. Manual smoke under QEMU only
     # (needs /dev/fb0 + /dev/input/event*); NOT a ctest.
     add_executable(fbdev-host host/linux_fbdev_main.cpp host/fbdev_device.cpp
