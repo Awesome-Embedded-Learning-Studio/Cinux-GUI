@@ -85,7 +85,11 @@
 | **P3-a** | 控件模型 + PaintList + 事件路由：Widget 基类（rect/children/hit_test/on_pointer/paint_to_list）+ PaintList（原语序列 fill_rect/text/clip）+ Desktop（dispatch + render）+ Compositor::execute(PaintList) | ✅ | — | 新 test_widget：hit-test 命中 + dispatch + PaintList→像素 |
 | **P3-b** | swraster 圆角 + Material Theme：`fill_rounded_rect`（整数 isqrt 逐行角弧）+ `core/theme.*`（Material 配色 primary/surface/on-surface + 圆角半径 + 8dp 网格）+ execute 转真圆角 | ✅ | — | 圆角像素（角不溢出）+ theme 配色 + radius0/clamp |
 | **P3-c** | 基础控件 + 布局：Label / Button（down/hover/press 状态）/ Container + HBox/VBox + Widget::layout hook | ✅ | — | widgets-test：Label/Button rest-press/HBox/VBox 几何/desktop |
-| **P3-d** | Slider + host demo + P2 Scene 退役：Slider（拖动取值）+ replay/fbdev 控件 demo（Material 外观）+ 三 host 切控件树、Scene 退役 | 🔜 NEXT | — | ctest + ASAN + QEMU 冒烟（像素眼检 Material） |
+| **P3-d** | Slider + Desktop press capture + widgets demo host（Slider 拖动取值 + 圆 thumb；press capture 拖动跟手；widgets-host Material 控件树端到端 ctest + 像素眼检） | ✅ | — | slider-test + widgets-dump（ctest 11/11 + ASAN + 像素眼检 Material） |
+
+### Follow-up：fbdev 控件化 + Scene 退役（P3 后,迟早做,非阻塞）
+
+fbdev host 切控件树（重写 `linux_fbdev_main` 经 Desktop + 控件树,替代 P2 Scene 路径）+ QEMU 冒烟验真 evdev → Desktop 全链路;P2 `core/scene.*` + `compose(Scene)` 在确认无 P4+ 引用后退役。**暂缓理由**:widgets-host ctest + 像素眼检 + slider/widgets-test 已完整证明控件层;fbdev 真跑是集成验证,P4 桌面迁入时 fbdev 自然控件化。同 CI-P2 模式。
 
 ## 验证哲学
 

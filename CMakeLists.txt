@@ -116,6 +116,11 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(slider-test PRIVATE cinux-gui)
     add_test(NAME slider-test COMMAND slider-test)
 
+    # P3-d: widgets demo host (Material widget tree -> one PPM frame).
+    add_executable(widgets-dump host/widgets_host_main.cpp host/ppm_writer.cpp)
+    target_link_libraries(widgets-dump PRIVATE cinux-gui)
+    add_test(NAME widgets-dump COMMAND widgets-dump)
+
     # P1 Probe-1: real Linux fbdev+evdev host. Manual smoke under QEMU only
     # (needs /dev/fb0 + /dev/input/event*); NOT a ctest.
     add_executable(fbdev-host host/linux_fbdev_main.cpp host/fbdev_device.cpp
