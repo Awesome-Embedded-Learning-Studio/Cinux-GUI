@@ -134,6 +134,12 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(terminal-test PRIVATE cinux-gui)
     add_test(NAME terminal-test COMMAND terminal-test)
 
+    # P4-d: posix_spawn (forkpty) unit test -- host layer, links libutil.
+    add_executable(posix-spawn-test test/test_posix_spawn.cpp host/posix_spawn.cpp)
+    target_include_directories(posix-spawn-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/host)
+    target_link_libraries(posix-spawn-test PRIVATE util)
+    add_test(NAME posix-spawn-test COMMAND posix-spawn-test)
+
     # P3-d: widgets demo host (Material widget tree -> one PPM frame).
     add_executable(widgets-dump host/widgets_host_main.cpp host/ppm_writer.cpp)
     target_link_libraries(widgets-dump PRIVATE cinux-gui)
@@ -156,5 +162,14 @@ if(CINUX_GUI_STANDALONE)
         find_package(SDL2 REQUIRED)
         add_executable(sdl-host host/sdl_host_main.cpp)
         target_link_libraries(sdl-host PRIVATE cinux-gui SDL2::SDL2)
+    endif()
+
+    # P4-d: SDL2 interactive terminal host (real shell via PTY; opt-in).
+    # Host layer only -- core never sees SDL or PTY.
+    option(CINUX_HOST_TERMINAL "Build SDL2 interactive terminal host (needs SDL2 + PTY)" OFF)
+    if(CINUX_HOST_TERMINAL)
+        find_package(SDL2 REQUIRED)
+        add_executable(terminal-host host/terminal_host_main.cpp host/posix_spawn.cpp)
+        target_link_libraries(terminal-host PRIVATE cinux-gui SDL2::SDL2 util)
     endif()
 endif()

@@ -97,8 +97,8 @@
 | **P4-a** | `Window` 复合控件（标题栏自画：色带 + 标题文字 + 关闭键；圆角 body + content 子控件）+ 标题栏拖拽 + 关闭回调（hit_test/on_pointer 自管，非 HBox —— P3 HBox 等分限制） | ✅ | — | 新 test_window：标题栏 hit-test / 几何 / 拖拽 / 关闭（6 断言绿） |
 | **P4-b** | `WindowManager`（Z 序栈 / click-to-raise / 标题栏拖动移窗 / 关闭销毁）住 Desktop 上层 + 简单软件 cursor | ✅ | — | wm-test：Z 序 / raise / click-to-raise / close / cursor（6 断言绿） |
 | **P4-c** | `TerminalWidget`（80×25 字符缓冲 + cursor + 换行/滚动 + 渲染到 PaintList），IO 先注桩（不接 shell） | ✅ | — | terminal-test：写字 / cursor / `\n`/`\r`/`\b` / 滚动 / 像素（6 断言绿）；扩 PaintList 4096 + 新 kTextGlyph cmd |
-| **P4-d** | Terminal IO + 首实装 `HostDesktop::spawn`（Linux host fork+exec `/bin/sh` + PTY）+ terminal-host 真 shell 交互 | 🔜 NEXT | — | TerminalIo 注入 ctest + terminal-host 眼检真 shell |
-| **P4-e** | fbdev host 切控件树（替 P2 Scene 路径）+ `core/scene.*` / `compose(Scene)` 退役（确认无引用）+ desktop icon constexpr 数据 | 🔜 | — | fbdev QEMU 真 evdev→WM 全链路冒烟 + Scene 退役零回归 ctest |
+| **P4-d** | Terminal IO + 首实装 `HostDesktop::spawn`（Linux host forkpty + exec `/bin/sh` + PTY）+ terminal-host 真 shell 交互 | ✅ | — | posix-spawn-test（forkpty + echo）ctest + terminal-host 编译链接（真 shell 眼检留 WSLg） |
+| **P4-e** | fbdev host 切控件树（替 P2 Scene 路径）+ `core/scene.*` / `compose(Scene)` 退役（确认无引用）+ desktop icon constexpr 数据 | 🔜 NEXT | — | fbdev QEMU 真 evdev→WM 全链路冒烟 + Scene 退役零回归 ctest |
 
 ### Follow-up：fbdev 控件化 + Scene 退役 → 已并入 P4-e
 
