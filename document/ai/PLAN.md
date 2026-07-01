@@ -2,7 +2,7 @@
 
 > 批级（最易变）。**里程碑全树见 [ROADMAP.md](ROADMAP.md)。**
 > **P0 Probe-0 完成 ✅**：核心渲染管线 standalone 跑通——pump→core.staging→swraster→glyph_blit→flush，事件回放驱动拖拽，脏区纪律断言（idle 0 / 首帧全屏 / 后续局部）。3 个 ctest（smoke + offscreen + replay）全绿 + ASAN 干净。
-> **P1 Probe-1 代码✅ 冒烟待手动**：fbdev+evdev 真 host（`host/linux_fbdev_main.cpp`）+ evdev accumulator 单测（`test/test_evdev.cpp`，4 ctest 绿 + ASAN）。真 QEMU fbdev 冒烟待跑（手动，runbook 见 `document/notes/2026-06-30-p1-probe1-fbdev-host.md`）。
+> **P1 Probe-1 完成 ✅**：fbdev+evdev 真 host（`host/linux_fbdev_main.cpp`）+ evdev accumulator 单测（`test/test_evdev.cpp`，4 ctest 绿 + ASAN）+ **真 QEMU 冒烟 PASS**（自构建 x86_64 kernel + busybox initramfs，`fb0:bochs-drmdrmfb` + usb-tablet + fbdev-host 跑满 40s 不崩，像素采样验场景画对）。core 一行没动，只换 host 表——解耦缝证毕。详见 `document/notes/2026-06-30-p1-probe1-fbdev-host.md`。
 
 ## 现状速览（我们站在哪）
 

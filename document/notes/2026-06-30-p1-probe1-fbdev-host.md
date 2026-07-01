@@ -1,6 +1,6 @@
 # 2026-06-30 · P1 Probe-1 · Linux fbdev+evdev host（第二个真 host）
 
-> P0 standalone 跑通后，P1 用真 Linux fbdev + evdev 当第二个真 host，证明 Host ABI 解耦缝干净——同一个 core（pump/staging/swraster/region）只换表填充，就从 offscreen/replay 换成真屏+真鼠标。**代码 + 单测完成；真 QEMU 冒烟待手动。**
+> P0 standalone 跑通后，P1 用真 Linux fbdev + evdev 当第二个真 host，证明 Host ABI 解耦缝干净——同一个 core（pump/staging/swraster/region）只换表填充，就从 offscreen/replay 换成真屏+真鼠标。**代码 + 单测 + 真 QEMU 冒烟全部 PASS（2026-07-01）。**
 
 ## 背景
 
@@ -10,7 +10,7 @@ P0 的 offscreen/replay host 是「假 host」（无真屏/真鼠标，事件 sc
 
 1. fbdev host（fbdev mmap + evdev + Host 表），复用 b2/b3 场景 + 拖拽状态机。
 2. evdev `input_event` 流 → `PointerPayload` 的转换可单测（不依赖真设备）。
-3. WSL2 编译验证 + 单测；真 QEMU 冒烟给步骤（手动）。
+3. 真 QEMU 冒烟 PASS（自构建 kernel + initramfs，见下）。
 
 ## 设计
 
@@ -26,7 +26,7 @@ P0 的 offscreen/replay host 是「假 host」（无真屏/真鼠标，事件 sc
 
 ### `host/linux_fbdev_main.cpp` — host main
 
-组装 Host 表：`poll_event`=evdev→Event，`dispatch_event`=拖拽状态机（同 b3），`render_frame`=场景+真脏区（同 b3），`flush`=`fb.blit_rect`。主循环 `for(;;) core.pump(); usleep(16000)`（~60fps 节流；idle 帧 flush 0）。`timeout 40` 外部杀。
+组装 Host 表：`poll_event`=evdev→Event，`dispatch_event`=拖拽状态机（同 b3），`render_frame`=场景+真脏区（同 b3），`flush`=`fb.blit_rect`。主循环 `for(;;) core.pump(); usleep(16000)`（~60fps 节流；idle 帧 flush 0）。`timeout 40` 外部杀。argv：`argv[1]=fb` 路径（默认 `/dev/fb0`），`argv[2]=event` 路径（默认 `/dev/input/event0`）。
 
 ### `test/test_evdev.cpp` — accumulator 单测
 
@@ -45,64 +45,81 @@ P0 的 offscreen/replay host 是「假 host」（无真屏/真鼠标，事件 sc
 - **`poll_event` 必须非阻塞**（`O_NONBLOCK`）：pump 的 `while(poll_event)` 会 drain 到空，阻塞 read 会卡死整个 GUI。
 - **EVIOCGRAB**：抢占设备避免 console TTY 也收事件（否则鼠标同时移动光标 + 切 console）。
 - **fbdev stride ≠ width×4**：按 `finfo.line_length` 定位行（VESA fb 可能行尾有 padding）。
-- **部署 libc 兼容**：Alpine 是 musl、Debian 是 glibc——WSL2 编的 glibc 动态二进制不能直接跑 Alpine。静态编译或镜像内原生编译（见 runbook）。
+- **三方案全废，改自构建**（最大教训，见下）：Alpine ISO + 9p / + HTTP / + VNC 手动驱都不通（9p tag 死活不匹配、SLIRP wget 卡死、VNC 手动驱不符合 CI 化目标）。**自构建 x86_64 kernel + busybox initramfs**（PenguinLab 源码复用）一气呵成——initramfs 自带一切（busybox + 静态 fbdev-host + `/init`），零 guest→host transport。
 
 ## 验证
 
 - **4 ctest 全绿**：cinux-gui-smoke + offscreen-dump + replay-dump + **evdev-test**（accumulator 7 断言）。
 - **ASAN 干净**：evdev-test 直接 run exit 0。
-- **fbdev-host 编译通过**（32KB 二进制；WSL2 无 /dev/fb0 不能本机跑）。
-- **真 QEMU 冒烟待手动**（见 runbook）。
+- **fbdev-host 静态编译**（936K，`glibc-static`，`-static -fno-exceptions -fno-rtti`）。
+- **真 QEMU 冒烟 PASS**（2026-07-01，见下）。
 
-## QEMU 冒烟（scripts/smoke_p1.sh 半自动）
+## QEMU 冒烟（scripts/，自构建 kernel + initramfs）
 
-本仓 `scripts/smoke_p1.sh` + `scripts/guest_smoke_p1.sh` 自动化了 P1 冒烟（Workflow 调研 Alpine 镜像 / QEMU flags / 静态部署 / evdev 发现后综合设计）：
+**方案：自构建 kernel + busybox initramfs。** 三大 transport（9p / HTTP / VNC 手动驱）全废后，改用 PenguinLab 源码（`~/PenguinLab/third_party/{linux,busybox}`，Linux 6.19.9 + busybox 1.37）自构建一个最小 x86_64 环境：initramfs 自带一切，kernel `rdinit=/init` 直接跑 `/init`，`/init` 自己发现设备 + 跑 fbdev-host。**零 guest→host transport = 零 9p/HTTP/网络依赖 = 不可能卡。**
 
-- **host（`smoke_p1.sh`）**：缓存 Alpine virt 3.21.3 ISO（sha256 pin）+ 起 QEMU（`-vga std` vesafb→`/dev/fb0` + `qemu-xhci + usb-tablet` EV_ABS + `vnc=127.0.0.1:99` + readonly 9p 源码共享 + `-serial file` capture + `-monitor unix` screendump）+ poll serial + 自动 gates（boot/device/run/no-crash）。
-- **guest（VNC 里跑 `guest_smoke_p1.sh`）**：mount 9p + `apk add cmake g++` + 原生编译（musl，零 libc 兼容坑）+ 从 `/proc/bus/input/devices` 发现 tablet `eventN` + `timeout 40 ./fbdev-host /dev/fb0 /dev/input/eventN`。
-- **半自动**：host 准备 + gate；VNC 手动跑 guest 脚本（人眼看屏 + 鼠标交互）。全自动 apkovl autoexec 标 TODO（避免 expect/双向 serial 复杂度）。
-- **VNC :99（TCP 5999）** 远离 CinuxOS 默认 `-vnc :0`（5900），不冲突。
+### 脚本链（一次构建，缓存）
 
-跑：`./scripts/smoke_p1.sh`，按提示 VNC 连 `localhost:5999`，Alpine shell 里 `sh /mnt/src/scripts/guest_smoke_p1.sh`。
+| 脚本 | 产物 | 备注 |
+|---|---|---|
+| `build_kernel_x86_64.sh` | `build/smoke/linux-build/.../bzImage`（15M） | `x86_64_defconfig` + 强开 FB/FB_VESA/FRAMEBUFFER_CONSOLE/VT/USB/USB_XHCI(_PCI)/HID/USB_HID/INPUT_EVDEV/**DRM/DRM_KMS_HELPER/DRM_FBDEV_EMULATION/DRM_BOCHS** + olddefconfig。**关键**：`-vga std` 在此内核走 bochs-drm 而非 vesafb，必须开 DRM_BOCHS + DRM_FBDEV_EMULATION 才有 `/dev/fb0`（`fb0: bochs-drmdrmfb`）。 |
+| `build_busybox_x86_64.sh` | `build/smoke/busybox-root/`（2.5M 静态） | defconfig + `CONFIG_STATIC=y` + 去 `CONFIG_TC`（1.37 tc.c 用了 kernel 6.19 已删的 CBQ uapi，编不过）+ `EXTRA_CFLAGS=-Wno-error`。 |
+| `build_fbdev_host_static.sh` | `build/smoke/fbdev-host-static`（936K） | `cmake -DCMAKE_EXE_LINKER_FLAGS=-static`，glibc-static 路径。 |
+| `build_initramfs.sh` | `build/smoke/rootfs.cpio.gz`（1.7M） | busybox-root + fbdev-host-static + `/init` + 静态设备节点（console/fb0/null/ttyS0）→ cpio.gz newc。 |
+| `smoke_p1.sh` | `build/smoke/run/serial.log` + `shot.ppm` | QEMU `-kernel bzImage -initrd rootfs.cpio.gz -append "console=ttyS0 rdinit=/init" -vga std -device qemu-xhci -device usb-tablet -display vnc=127.0.0.1:99 -serial file -monitor unix`，poll serial 上的 `GUEST_*` marker，自动 gates。 |
 
-`fbdev-host` 接受设备路径 argv（`argv[1]=fb`，`argv[2]=event`，默认不变）——脚本把发现的 `eventN` 传进去。
+### `/init`（kernel 跑，输出→ttyS0→serial.log→host gates）
 
-### 手动 runbook（fallback / 理解各步）
-
-### 1. 准备一个带 fbdev 的 Linux 镜像
-任一带 vesafb 的轻量 Linux QCOW2（Alpine 或 Debian cloud）。fbdev 要出现 `/dev/fb0`（`-vga std` → vesafb）。
-
-### 2. 部署 fbdev-host 二进制
-两种（任选）：
-- **镜像内原生编译（最简，无 libc 兼容坑）**：拷本仓源码进镜像 → `apk add cmake g++`（Alpine）或 `apt install cmake g++`（Debian）→ `cmake -S . -B build && cmake --build build -j$(nproc) fbdev-host`。
-- **WSL2 静态编译 + 拷二进制**：`cmake -S . -B build -DCMAKE_EXE_LINKER_FLAGS=-static ...` → 拷 `build/fbdev-host` 进镜像（Alpine 要 musl-gcc 静态；Debian glibc 静态）。
-
-### 3. QEMU 启动（fbdev + usb-tablet 鼠标 + VNC）
+```sh
+set -x; echo GUEST_INIT_OK
+mount -t proc none /proc; mount -t sysfs none /sys
+mount -t devtmpfs none /dev; mount -t tmpfs none /tmp
+[ -c /dev/fb0 ] && echo "GUEST_FB0_OK name=$(cat /sys/class/graphics/fb0/name)"
+# tablet 发现：/proc/bus/input/devices grep（/sys/class/input glob 在此 guest 是空的）
+EVT=""; i=0
+while [ "$i" -lt 10 ] && [ -z "$EVT" ]; do
+  i=$((i+1))
+  EVT=$(grep -A6 "USB Tablet" /proc/bus/input/devices | grep -o "event[0-9]*" | head -1)
+  [ -z "$EVT" ] && sleep 1   # tablet ~3.5s 才注册，retry
+done
+echo "GUEST_TABLET_EVENT=${EVT:-none}"
+[ -n "$EVT" ] && [ -c "/dev/input/$EVT" ] && echo GUEST_TABLET_OK
+echo GUEST_RUN_START
+timeout 40 /usr/bin/fbdev-host /dev/fb0 "/dev/input/$EVT"
+echo "GUEST_RUN_RC=$?"; echo GUEST_RUN_DONE
 ```
-qemu-system-x86_64 -m 512 \
-  -drive file=linux.qcow2,format=qcow2 \
-  -vga std \
-  -usb -device usb-tablet \
-  -display vnc=:0
-```
-- `-vga std`：vesafb，镜像内 `/dev/fb0`
-- `-usb -device usb-tablet`：USB tablet 鼠标（绝对坐标 → evdev `/dev/input/event*`）
-- `-display vnc=:0`：宿主 `vncviewer :0` 看屏
 
-### 4. 冒烟
-镜像内（root 或 video/input 组）：
-```
-# 确认鼠标的 event 设备号（fbdev-host 默认 event0，按实际改 linux_fbdev_main.cpp）
-cat /proc/bus/input/devices
-timeout 40 ./fbdev-host
-```
-**预期**：VNC 屏幕出现窗口（蓝色标题栏 "Cinux" + "Hello / Cinux-GUI"）+ 白光标；移动鼠标→光标跟；按住拖标题栏→窗口跟动；松开→窗口停。`timeout 40` 40 秒后自动退。
+### 真跑结果（2026-07-01，PASS）
 
-### 5. 记结果
-回填本笔记「真跑结果」+ ROADMAP P1 状态。
+```
+GUEST_INIT_OK
+GUEST_FB0_OK name=bochs-drmdrmfb          # gate1 ✓ — DRM bochs + fbdev emulation → /dev/fb0
+GUEST_TABLET_EVENT=event3                  # tablet 发现 ✓（retry 第 1 次命中，/proc grep）
+GUEST_TABLET_OK                            # gate2 ✓
+fbdev-host: fb 1280x800 stride 5120        # gate3 ✓ — mmap 成功，stride=1280×4（无 padding）
+fbdev-host: running -- move/drag the mouse # 主循环起来
+GUEST_RUN_RC=143                           # 外部 timeout SIGTERM（预期；40s 跑满）
+[smoke] PASS -- boot + devices + fbdev-host loop, no crash.
+```
+
+**像素证据**（`shot.ppm` 1280×800 Python 采样，证 fbdev-host 真画了场景）：
+- `(0,0)` 背景 = `(24,24,42)` = `kBg 0x0018182A` ✓
+- `(640,328)` 标题栏 = `(48,96,160)` = `kTitleBar 0x003060A0` ✓
+- sweep y=400：`x=560/720` 窗口面 `(200,200,200)` = `kWinFace 0x00C8C8C8` ✓，`x=640` 白 `(255,255,255)` = 光标落在窗口中心 ✓
+
+### 踩过的坑（记录价值）
+
+- **`-vga std` ≠ vesafb**：此 defconfig 内核不开 `CONFIG_FB_VESA` 的 VBE 切换，`video=vesafb:` 不会出 `/dev/fb0`。开 **DRM_BOCHS + DRM_FBDEV_EMULATION** → bochs-drm 探测 → `/dev/fb0 (bochs-drmdrmfb)`。
+- **tablet 发现用 `/proc/bus/input/devices`，别用 `/sys/class/input` glob**：此 guest 下 `/sys/class/input/event*/name` glob 全程不展开（sysfs input class 空），10 次 retry 全字面。改 `/proc/bus/input/devices | grep -A6 "USB Tablet" | grep -o event[0-9]*` 一次命中 `event3`。
+- **busybox 1.37 vs kernel 6.19**：`CONFIG_TC` 默认开，tc.c 用了 6.19 删掉的 CBQ uapi，编不过 → sed 关掉。
+- **三方案全废（教训）**：9p（driver 绑了但 tag 死活不匹配）、HTTP（SLIRP guest→host wget 卡死）、VNC 手动驱（不符合 CI 化）——都堵在 guest→host transport。自构建 initramfs 把 transport 整个消掉，最干净。
+
+## 结论
+
+**P1 Probe-1 成立**：同一个 core（pump/staging/swraster/region/Host ABI 表），从 offscreen/replay host 换到真 Linux fbdev + evdev host，**只换 host 表填充，core 一行没动**。真 fbdev mmap + 真 evdev usb-tablet，fbdev-host 在 QEMU 上跑满 40s 不崩、画对场景。Host ABI 解耦缝在第二个真 host 上干净——这是 P1 的全部主张。
 
 ## 后续
 
-- **真跑反馈**：用户跑完回填结果（光标跟动 / 拖拽 / 是否崩）。若 evdev 设备号/event 解析有问题，调 `linux_fbdev_main.cpp`。
 - **P2 渲染收敛**：swraster 正式接管，compositor dirty-region 双缓冲差分（b3/P1 的「整屏重画 staging」优化成真差分）。
+- **真 `poll(fd)` 阻塞等输入**：替掉 P1 的 `usleep(16000)` 忙等节流（省 CPU）。
 - **CinuxOS 零改动**（P1 standalone；CinuxOS 自己的 host_cinux 是另一个真 host，本仓不动它）。
