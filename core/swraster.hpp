@@ -50,10 +50,10 @@ struct ClipRect {
  * backend aligns rows to a cache line -- presets §4 pixel-format hard contract).
  */
 struct Surface {
-    void*              pixels;
-    uint32_t           width;
-    uint32_t           height;
-    uint32_t           stride_bytes;
+    void*       pixels;
+    uint32_t    width;
+    uint32_t    height;
+    uint32_t    stride_bytes;
     PixelFormat format;
 };
 
@@ -65,6 +65,17 @@ struct Surface {
  */
 void fill_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color,
                const ClipRect* clip);
+
+/**
+ * @brief Solid rounded-rectangle fill (Material shape; P3-b)
+ *
+ * Like fill_rect but with @p radius-pixel rounded corners. The radius is
+ * clamped to min(w,h)/2 so corner arcs never overlap; radius == 0 is exactly
+ * fill_rect. Integer-only: per-row corner offset via an integer isqrt
+ * (floor(sqrt(r²-d²))). XRGB8888 only; other formats no-op.
+ */
+void fill_rounded_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color,
+                       uint32_t radius, const ClipRect* clip);
 
 /**
  * @brief Opaque pixel copy src -> dst (generalises Canvas::blit)

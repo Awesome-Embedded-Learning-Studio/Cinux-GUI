@@ -38,14 +38,10 @@ inline void effective_bounds(const Surface& s, const ClipRect* clip, int32_t& ex
     ex1 = static_cast<int32_t>(s.width);
     ey1 = static_cast<int32_t>(s.height);
     if (clip != nullptr) {
-        if (clip->x0 > ex0)
-            ex0 = clip->x0;
-        if (clip->y0 > ey0)
-            ey0 = clip->y0;
-        if (clip->x1 < ex1)
-            ex1 = clip->x1;
-        if (clip->y1 < ey1)
-            ey1 = clip->y1;
+        if (clip->x0 > ex0) ex0 = clip->x0;
+        if (clip->y0 > ey0) ey0 = clip->y0;
+        if (clip->x1 < ex1) ex1 = clip->x1;
+        if (clip->y1 < ey1) ey1 = clip->y1;
     }
 }
 
@@ -57,6 +53,17 @@ inline uint32_t* xrgb_row(Surface& s, int32_t y) {
 inline const uint32_t* xrgb_crow(const Surface& s, int32_t y) {
     const uint32_t ppr = s.stride_bytes / 4u;
     return static_cast<const uint32_t*>(s.pixels) + static_cast<uint32_t>(y) * ppr;
+}
+
+/* Integer square root (floor). Used by fill_rounded_rect's per-row corner
+ * offset; inputs stay small (<= radius², radius<=16 -> <=256), so a linear
+ * scan is fine and stays integer-only. */
+uint32_t isqrt_u32(uint32_t n) {
+    uint32_t k = 0u;
+    while ((k + 1u) * (k + 1u) <= n) {
+        k++;
+    }
+    return k;
 }
 
 }  // namespace
@@ -79,6 +86,80 @@ void fill_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_
         uint32_t* row = xrgb_row(s, r);
         for (int32_t c = rx0; c < rx1; c++) {
             row[c] = color;
+        }
+    }
+}
+
+void fill_rounded_rect(Surface& s, int32_t x, int32_t y, uint32_t w, uint32_t h, uint32_t color,
+                       uint32_t radius, const ClipRect* clip) {
+    if (s.format != PixelFormat::kXrgb8888 || w == 0u || h == 0u) {
+        return;
+    }
+    /* Clamp radius to min(w,h)/2 so the four corner arcs never overlap. */
+    uint32_t r      = radius;
+    uint32_t half_w = w / 2u;
+    uint32_t half_h = h / 2u;
+    if (r > half_w) {
+        r = half_w;
+    }
+    if (r > half_h) {
+        r = half_h;
+    }
+    if (r == 0u) {
+        fill_rect(s, x, y, w, h, color, clip);
+        return;
+    }
+
+    int32_t ex0, ey0, ex1, ey1;
+    effective_bounds(s, clip, ex0, ey0, ex1, ey1);
+    const int32_t x1 = x + static_cast<int32_t>(w);
+    const int32_t y1 = y + static_cast<int32_t>(h);
+    int32_t       rx0, rx1, ry0, ry1;
+    if (!isect(x, x1, ex0, ex1, rx0, rx1)) {
+        return;
+    }
+    if (!isect(y, y1, ey0, ey1, ry0, ry1)) {
+        return;
+    }
+
+    const uint32_t rr  = r * r;
+    const uint32_t ppr = s.stride_bytes / 4u;
+    uint32_t*      buf = static_cast<uint32_t*>(s.pixels);
+    const int32_t  ir  = static_cast<int32_t>(r);
+    const int32_t  ih  = static_cast<int32_t>(h);
+
+    for (int32_t py = ry0; py < ry1; py++) {
+        const int32_t iy = py - y; /* 0..h-1, row within the rounded rect */
+        /* Mirror bottom-corner rows up so the same offset math applies. */
+        int32_t row = iy;
+        if (iy >= ih - ir) {
+            row = ih - 1 - iy;
+        }
+        int32_t off = 0;
+        if (row < ir) {
+            /* d = rows from the corner's circle centre; off = r - isqrt(r²-d²)
+             * is how far the arc bites in from the left/right edge this row. */
+            const int32_t  d      = ir - 1 - row;
+            const uint32_t inside = (d >= 0) ? rr - static_cast<uint32_t>(d) * d : rr;
+            off                   = ir - static_cast<int32_t>(isqrt_u32(inside));
+            if (off < 0) {
+                off = 0;
+            }
+        }
+        int32_t sx0 = x + off;
+        int32_t sx1 = x1 - off;
+        if (sx0 < rx0) {
+            sx0 = rx0;
+        }
+        if (sx1 > rx1) {
+            sx1 = rx1;
+        }
+        if (sx0 >= sx1) {
+            continue;
+        }
+        uint32_t* drow = buf + static_cast<uint32_t>(py) * ppr;
+        for (int32_t c = sx0; c < sx1; c++) {
+            drow[c] = color;
         }
     }
 }

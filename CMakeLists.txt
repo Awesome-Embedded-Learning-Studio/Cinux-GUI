@@ -42,6 +42,7 @@ add_library(cinux-gui STATIC
     core/region.cpp
     core/scene.cpp
     core/swraster.cpp
+    core/theme.cpp
     core/widget.cpp
     core/abi_check.cpp
 )
@@ -95,6 +96,11 @@ if(CINUX_GUI_STANDALONE)
     add_executable(widget-test test/test_widget.cpp)
     target_link_libraries(widget-test PRIVATE cinux-gui)
     add_test(NAME widget-test COMMAND widget-test)
+
+    # P3-b: Material theme + rounded-rect rasteriser.
+    add_executable(theme-test test/test_theme.cpp)
+    target_link_libraries(theme-test PRIVATE cinux-gui)
+    add_test(NAME theme-test COMMAND theme-test)
 
     # P1 Probe-1: real Linux fbdev+evdev host. Manual smoke under QEMU only
     # (needs /dev/fb0 + /dev/input/event*); NOT a ctest.

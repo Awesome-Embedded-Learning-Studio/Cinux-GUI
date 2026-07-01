@@ -187,10 +187,8 @@ void execute(Surface& staging, const PaintList& list, const PsfFont& font) {
                 fill_rect(staging, c.fill.x, c.fill.y, c.fill.w, c.fill.h, c.fill.color, cur());
                 break;
             case CmdKind::kFillRoundRect:
-                // P3-b routes this to fill_rounded_rect; today a plain rect keeps
-                // the list paintable (no rounded primitive yet).
-                fill_rect(staging, c.rfill.x, c.rfill.y, c.rfill.w, c.rfill.h, c.rfill.color,
-                          cur());
+                fill_rounded_rect(staging, c.rfill.x, c.rfill.y, c.rfill.w, c.rfill.h,
+                                  c.rfill.color, c.rfill.radius, cur());
                 break;
             case CmdKind::kText:
                 draw_text(staging, font, c.text.text, c.text.x, c.text.y, c.text.color, cur());
