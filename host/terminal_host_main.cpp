@@ -58,7 +58,10 @@ int main() {
         std::printf("window: %s\n", SDL_GetError());
         return 1;
     }
-    SDL_Renderer* ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    // WSLg: software renderer. The accelerated path stalls the X compositor on
+    // a 720x440 streaming texture (GPU upload + VSync), dragging the whole
+    // desktop. Software stays on the CPU and leaves WSLg responsive.
+    SDL_Renderer* ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE);
     if (ren == nullptr) {
         ren = SDL_CreateRenderer(win, -1, 0);
     }
@@ -188,7 +191,7 @@ int main() {
             SDL_RenderCopy(ren, tex, nullptr, nullptr);
             SDL_RenderPresent(ren);
         }
-        SDL_Delay(16);  // ~60 fps
+        SDL_Delay(33);  // ~30 fps (ease WSLg/X pressure)
     }
 
     close(in_fd);  // SIGHUP to the shell
