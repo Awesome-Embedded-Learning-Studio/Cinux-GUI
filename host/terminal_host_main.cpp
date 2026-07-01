@@ -21,6 +21,7 @@
 
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>  // setenv (P5-e: TERM for ls --color)
 
 #include "event_payload.hpp"
 #include "font.hpp"
@@ -98,7 +99,9 @@ int main() {
     Desktop desktop;
     desktop.set_root(&wm);
 
-    // spawn /bin/sh under a PTY
+    // spawn /bin/sh under a PTY. Set TERM so ls --color / curses emit SGR (the
+    // PTY is a tty, but programs also gate colour on $TERM being colour-capable).
+    setenv("TERM", "xterm-256color", 1);
     int       in_fd  = -1;
     int       out_fd = -1;
     char*     argv[] = {const_cast<char*>("sh"), nullptr};
@@ -167,20 +170,24 @@ int main() {
             }
         }
 
-        // drain shell output -> terminal
-        char    rbuf[1024];
-        ssize_t n;
-        while ((n = read(out_fd, rbuf, sizeof(rbuf))) > 0) {
+        // drain shell output -> terminal, capped per frame so a large burst
+        // (bashrc / `ls /usr/lib`) spreads across frames instead of stalling one.
+        char     rbuf[1024];
+        ssize_t  n;
+        uint32_t read_total = 0u;
+        while (read_total < 8192u && (n = read(out_fd, rbuf, sizeof(rbuf))) > 0) {
             term.write(rbuf, static_cast<uint32_t>(n));
+            read_total += static_cast<uint32_t>(n);
         }
 
         Region dirty;
         desktop.render(staging, font, &dirty);
-
-        SDL_UpdateTexture(tex, nullptr, buf, static_cast<int>(kW) * 4);
-        SDL_RenderClear(ren);
-        SDL_RenderCopy(ren, tex, nullptr, nullptr);
-        SDL_RenderPresent(ren);
+        if (dirty.count() > 0u) {  // P5-c: skip the costly upload when idle
+            SDL_UpdateTexture(tex, nullptr, buf, static_cast<int>(kW) * 4);
+            SDL_RenderClear(ren);
+            SDL_RenderCopy(ren, tex, nullptr, nullptr);
+            SDL_RenderPresent(ren);
+        }
         SDL_Delay(16);  // ~60 fps
     }
 
