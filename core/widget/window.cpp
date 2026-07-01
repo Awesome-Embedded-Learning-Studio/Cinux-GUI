@@ -37,7 +37,8 @@ void Window::move_to_(int32_t x, int32_t y) {
     const uint32_t w = rect_.width();
     const uint32_t h = rect_.height();
     set_rect(x, y, w, h);
-    layout();  // reposition content into the new rect
+    layout();      // reposition content into the new rect
+    invalidate();  // P5-c: window moved
 }
 
 bool Window::in_title_bar_(int32_t x, int32_t y) const {
@@ -79,12 +80,14 @@ void Window::on_pointer(const PointerPayload& p) {
     if (p.kind == kPointerKindDown) {
         if (in_close_button_(p.x, p.y)) {
             close_armed_ = true;
+            invalidate();  // P5-c: close button armed
         } else if (in_title_bar_(p.x, p.y)) {
             dragging_ = true;
             drag_px_  = p.x;
             drag_py_  = p.y;
             win_ox_   = rect_.x0;
             win_oy_   = rect_.y0;
+            invalidate();
         }
     } else if (p.kind == kPointerKindMove) {
         if (dragging_) {
@@ -96,6 +99,7 @@ void Window::on_pointer(const PointerPayload& p) {
         }
         dragging_    = false;
         close_armed_ = false;
+        invalidate();
     }
 }
 

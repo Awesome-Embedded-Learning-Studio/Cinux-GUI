@@ -175,6 +175,7 @@ int main() {
                 ok.set_theme(&t);
                 cancel.set_theme(&t);
                 root.set_bg(t.background);
+                root.invalidate();  // P5-c: colours changed -> repaint
             }
         }
 

@@ -82,6 +82,25 @@ public:
      */
     virtual void layout() {}
 
+    /** Mark this widget (and ancestors) as needing repaint. P5-c: only call on
+     * visible state change (press/value/text/cursor/move) -- set_rect does NOT
+     * invalidate (it is a layout primitive called every frame by containers). */
+    void invalidate() {
+        dirty_ = true;
+        if (parent_ != nullptr) {
+            parent_->invalidate();
+        }
+    }
+    /** True if this widget asked for a repaint since the last clear_dirty(). */
+    bool is_dirty() const { return dirty_; }
+    /** Clear dirty on this widget and all descendants. */
+    void clear_dirty() {
+        dirty_ = false;
+        for (uint32_t i = 0u; i < child_count_; ++i) {
+            children_[i]->clear_dirty();
+        }
+    }
+
 protected:
     /** Subclass drawing (clip already set to this widget's rect). Default: noop. */
     virtual void paint_to_list(PaintList& list) const { (void)list; }
@@ -90,6 +109,8 @@ protected:
     bool     visible_                = true;
     Widget*  children_[kMaxChildren] = {};
     uint32_t child_count_            = 0u;
+    Widget*  parent_                 = nullptr;  // P5-c: set by add_child
+    bool     dirty_                  = true;     // P5-c: repaint requested (start dirty)
 };
 
 /**

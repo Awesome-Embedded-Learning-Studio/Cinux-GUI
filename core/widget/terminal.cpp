@@ -24,6 +24,7 @@ void TerminalWidget::clear() {
     cur_col_    = 0;
     cur_row_    = 0;
     ansi_state_ = AnsiState::kNormal;
+    invalidate();  // P5-c: grid cleared
 }
 
 char TerminalWidget::cell_at(uint32_t col, uint32_t row) const {
@@ -123,6 +124,7 @@ void TerminalWidget::write(const char* data, uint32_t len) {
     for (uint32_t i = 0; i < len; ++i) {
         put_char_(data[i]);
     }
+    invalidate();  // P5-c: cells changed
 }
 
 void TerminalWidget::write(const char* str) {
@@ -132,6 +134,7 @@ void TerminalWidget::write(const char* str) {
     for (const char* p = str; *p != '\0'; ++p) {
         put_char_(*p);
     }
+    invalidate();  // P5-c: cells changed
 }
 
 void TerminalWidget::paint_to_list(PaintList& list) const {

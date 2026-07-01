@@ -115,8 +115,8 @@
 |---|---|---|---|---|
 | **P5-a** | 字体增强：swraster 整数缩放渲染（glyph_blit_scaled）+ 文本测量（text_width/height）+ Label set_scale（PSF 8×16 → 16×32，无新字体数据） | ✅ | — | font-scale-test（scale 2 = 4× pixel + 测量 + execute 一致） |
 | **P5-b** | 主题配色变体（primary_container/on_primary_container/surface_variant，M3 值）+ sdl-host 按 T 运行时切 light/dark | ✅ | — | theme-test 段 6（变体断言）+ sdl-host 编译（T 键眼检） |
-| **P5-c** | per-widget dirty（invalidate flag）+ Desktop.render 局部 dirty（只 composite 脏控件区）+ 帧间 diff（省 composite/flush） | 🔜 NEXT | — | dirty-test（局部 rect + idle 0 flush） |
-| **P5-d** | HBox/VBox flex 权重（set_flex）+ swraster per-corner 圆角（Window 四角圆 + 标题栏可真 HBox） | 🔜 | — | flex-test + per-corner 圆角像素 |
+| **P5-c** | per-widget dirty（invalidate 传播 root）+ Desktop.render idle（root 不脏 → 0 rect 0 flush）；set_rect 不 invalidate（layout 内部），控件状态变化显式 invalidate。局部 dirty（只刷脏区）留后续 | ✅ | — | dirty-test（idle 0 + 交互 dirty）+ ctest 17/17 零回归 |
+| **P5-d** | HBox/VBox flex 权重（set_flex）+ swraster per-corner 圆角（Window 四角圆 + 标题栏可真 HBox） | 🔜 NEXT | — | flex-test + per-corner 圆角像素 |
 | **P5-e** | 终端 ANSI 彩色渲染（SGR 16 色 fg/bg + 光标定位/清屏执行，TerminalWidget cells 加 color 属性） | 🔜 | — | terminal-ansi-test（颜色/光标/清屏） |
 
 ## 验证哲学

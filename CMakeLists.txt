@@ -114,6 +114,11 @@ if(CINUX_GUI_STANDALONE)
     target_link_libraries(font-scale-test PRIVATE cinux-gui)
     add_test(NAME font-scale-test COMMAND font-scale-test)
 
+    # P5-c: per-widget dirty + Desktop::render idle skip.
+    add_executable(dirty-test test/test_dirty.cpp)
+    target_link_libraries(dirty-test PRIVATE cinux-gui)
+    add_test(NAME dirty-test COMMAND dirty-test)
+
     # P3-c: basic widgets (Label/Button/Container) + HBox/VBox layout.
     add_executable(widgets-test test/test_widgets.cpp)
     target_link_libraries(widgets-test PRIVATE cinux-gui)

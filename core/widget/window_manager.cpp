@@ -33,6 +33,7 @@ void WindowManager::add_window(Window* w) {
     }
     windows_[count_++] = w;
     w->set_on_close(close_cb_, this);
+    invalidate();  // P5-c: a new window appeared
 }
 
 void WindowManager::remove_window(Window* w) {
@@ -80,6 +81,7 @@ Widget* WindowManager::hit_test(int32_t x, int32_t y) {
 void WindowManager::process_pointer(const PointerPayload& p) {
     cursor_x_ = p.x;
     cursor_y_ = p.y;
+    invalidate();  // P5-c: cursor moved and/or Z-order changed -> repaint
 
     if (p.kind == kPointerKindDown) {
         press_target_ = static_cast<Window*>(hit_test(p.x, p.y));

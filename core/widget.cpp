@@ -27,6 +27,7 @@ void Widget::add_child(Widget* w) {
         return;  // full or null -> drop (caller keeps kMaxChildren generous)
     }
     children_[child_count_++] = w;
+    w->parent_                = this;  // P5-c: so invalidate() propagates up
 }
 
 void Widget::flatten(PaintList& list) const {
@@ -81,16 +82,19 @@ void Desktop::dispatch_pointer(const PointerPayload& p) {
 void Desktop::render(Surface& staging, const PsfFont& font, Region* dirty) {
     if (dirty != nullptr) {
         dirty->clear();
-        dirty->add(
-            Rect{0, 0, static_cast<int32_t>(staging.width), static_cast<int32_t>(staging.height)});
     }
-    if (root_ == nullptr) {
-        return;
+    if (root_ == nullptr || !root_->is_dirty()) {
+        return;  // P5-c: idle -- nothing changed, 0 rects -> pump flushes nothing
     }
-    root_->layout();  // position children within their parent's rect
+    root_->clear_dirty();  // reset before paint (paint only draws, no invalidate)
+    root_->layout();       // position children within their parent's rect
     PaintList list;
     root_->flatten(list);
     execute(staging, list, font);
+    if (dirty != nullptr) {
+        dirty->add(
+            Rect{0, 0, static_cast<int32_t>(staging.width), static_cast<int32_t>(staging.height)});
+    }
 }
 
 }  // namespace cinux::gui
