@@ -170,4 +170,52 @@ void Compositor::compose(Surface& staging, const Scene& scene, const PsfFont& fo
     first_ = false;
 }
 
+void execute(Surface& staging, const PaintList& list, const PsfFont& font) {
+    /* Clip stack: each kClipPush intersects with its parent, so a widget can
+     * never paint outside its ancestors' rects. top == -1 means unclipped
+     * (primitives clip to the surface bounds only, via nullptr). */
+    constexpr uint32_t kMaxClip = 32;
+    ClipRect           stack[kMaxClip];
+    int32_t            top = -1;
+    const auto         cur = [&]() -> const ClipRect* { return top >= 0 ? &stack[top] : nullptr; };
+
+    const uint32_t n = list.count();
+    for (uint32_t i = 0u; i < n; i++) {
+        const PaintCmd& c = list.at(i);
+        switch (c.kind) {
+            case CmdKind::kFillRect:
+                fill_rect(staging, c.fill.x, c.fill.y, c.fill.w, c.fill.h, c.fill.color, cur());
+                break;
+            case CmdKind::kFillRoundRect:
+                // P3-b routes this to fill_rounded_rect; today a plain rect keeps
+                // the list paintable (no rounded primitive yet).
+                fill_rect(staging, c.rfill.x, c.rfill.y, c.rfill.w, c.rfill.h, c.rfill.color,
+                          cur());
+                break;
+            case CmdKind::kText:
+                draw_text(staging, font, c.text.text, c.text.x, c.text.y, c.text.color, cur());
+                break;
+            case CmdKind::kClipPush: {
+                if (top + 1 < static_cast<int32_t>(kMaxClip)) {
+                    ClipRect pushed{c.clip.x0, c.clip.y0, c.clip.x1, c.clip.y1};
+                    if (top >= 0) {  // intersect with the current top clip
+                        const ClipRect& p = stack[top];
+                        pushed            = ClipRect{pushed.x0 > p.x0 ? pushed.x0 : p.x0,
+                                                     pushed.y0 > p.y0 ? pushed.y0 : p.y0,
+                                                     pushed.x1 < p.x1 ? pushed.x1 : p.x1,
+                                                     pushed.y1 < p.y1 ? pushed.y1 : p.y1};
+                    }
+                    stack[++top] = pushed;
+                }
+                break;
+            }
+            case CmdKind::kClipPop:
+                if (top >= 0) {
+                    top--;
+                }
+                break;
+        }
+    }
+}
+
 }  // namespace cinux::gui

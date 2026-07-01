@@ -38,9 +38,11 @@ add_library(cinux-gui STATIC
     core/compositor.cpp
     core/font.cpp
     core/gui_core.cpp
+    core/paint_list.cpp
     core/region.cpp
     core/scene.cpp
     core/swraster.cpp
+    core/widget.cpp
     core/abi_check.cpp
 )
 # core/ is PUBLIC so consumers (a host adapter, the harness) resolve the bare
@@ -88,6 +90,11 @@ if(CINUX_GUI_STANDALONE)
     add_executable(compositor-test test/test_compositor.cpp)
     target_link_libraries(compositor-test PRIVATE cinux-gui)
     add_test(NAME compositor-test COMMAND compositor-test)
+
+    # P3-a: widget tree unit test (hit-test + dispatch + flatten->PaintList->pixels).
+    add_executable(widget-test test/test_widget.cpp)
+    target_link_libraries(widget-test PRIVATE cinux-gui)
+    add_test(NAME widget-test COMMAND widget-test)
 
     # P1 Probe-1: real Linux fbdev+evdev host. Manual smoke under QEMU only
     # (needs /dev/fb0 + /dev/input/event*); NOT a ctest.

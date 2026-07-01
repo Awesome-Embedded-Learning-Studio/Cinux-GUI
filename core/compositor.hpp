@@ -27,10 +27,11 @@
  */
 #pragma once
 
-#include "font.hpp"      // PsfFont
-#include "region.hpp"    // Region (Compositor dirty output)
-#include "scene.hpp"     // Scene
-#include "swraster.hpp"  // Surface
+#include "font.hpp"        // PsfFont
+#include "paint_list.hpp"  // PaintList (P3-a execute)
+#include "region.hpp"      // Region (Compositor dirty output)
+#include "scene.hpp"       // Scene
+#include "swraster.hpp"    // Surface
 
 namespace cinux::gui {
 
@@ -45,6 +46,20 @@ namespace cinux::gui {
  * @param font     PSF2 font for the windows' title/body text
  */
 void compose(Surface& staging, const Scene& scene, const PsfFont& font);
+
+/**
+ * @brief [P3-a] Paint a PaintList (widget tree's flattened output) into staging
+ *
+ * Walks @p list in order: fill_rect / fill_round_rect (P3-b paints real rounded
+ * corners; until then falls back to a plain rect so the list stays paintable) /
+ * text / clip push-pop. A clip stack intersects each kClipPush with its parent,
+ * so a widget can never paint outside its ancestors' rects.
+ *
+ * @param staging  core-owned staging Surface
+ * @param list     flattened draw cmds (from Widget::flatten)
+ * @param font     PSF2 font for text cmds
+ */
+void execute(Surface& staging, const PaintList& list, const PsfFont& font);
 
 /**
  * @brief [P2-c] Stateful compositor with frame-to-frame dirty diff
