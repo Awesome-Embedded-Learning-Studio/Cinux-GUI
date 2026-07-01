@@ -216,4 +216,13 @@ if(CINUX_GUI_STANDALONE)
         add_executable(terminal-host host/terminal_host_main.cpp host/posix_spawn.cpp)
         target_link_libraries(terminal-host PRIVATE cinux-gui SDL2::SDL2 util)
     endif()
+
+    # P7 gallery: interactive full-widget demo (SDL2; opt-in). Every control
+    # live: CheckBox/Radio/Dropdown/Button/Slider/TextBox/Window + keyboard.
+    option(CINUX_HOST_GALLERY "Build SDL2 interactive widget gallery (needs SDL2)" OFF)
+    if(CINUX_HOST_GALLERY)
+        find_package(SDL2 REQUIRED)
+        add_executable(gallery-host host/gallery_host_main.cpp)
+        target_link_libraries(gallery-host PRIVATE cinux-gui SDL2::SDL2)
+    endif()
 endif()
