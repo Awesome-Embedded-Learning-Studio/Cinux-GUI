@@ -154,11 +154,34 @@ void Compositor::render(Surface& staging, const PaintList& list, const PsfFont& 
         }
     }
 
-    /* P7-c: cursor on top of everything (a 4x4 block; state owned by the class).
-     * Clipped to cur() so under per-rect render it only paints inside the dirty
-     * rect that actually contains the cursor (no double-paint across rects). */
+    /* Cursor on top of everything: the legacy CinuxOS 16x16 arrow bitmap
+     * (1-bpp, MSB-first per row), each lit pixel painted as a 1px grey body
+     * with a 1px white outline for visibility on the dark theme. The 4x4
+     * block this replaced read as a faint blob. Clipped to cur() so under
+     * per-rect render it only paints inside the dirty rect that contains the
+     * cursor (no double-paint across rects). */
     if (cursor_visible_) {
-        fill_rect(staging, cursor_x_, cursor_y_, 4u, 4u, 0x00FFFFFFu, cur());
+        static constexpr uint16_t kCursorBitmap[16] = {
+            0x8000, 0xC000, 0xE000, 0xF000, 0xF800, 0xFC00, 0xFE00, 0xFF00,
+            0xFF00, 0xF800, 0xE000, 0xC000, 0x8800, 0x0800, 0x0000, 0x0000,
+        };
+        constexpr uint32_t kCursorBody    = 0x00888888u; /* grey fill (legacy "white") */
+        constexpr uint32_t kCursorOutline = 0x00FFFFFFu; /* white edge (legacy "black") */
+        for (uint32_t row = 0; row < 16u; ++row) {
+            const uint16_t bits = kCursorBitmap[row];
+            for (uint32_t col = 0; col < 16u; ++col) {
+                if ((bits & (0x8000u >> col)) == 0u) {
+                    continue;
+                }
+                const int32_t px = cursor_x_ + static_cast<int32_t>(col);
+                const int32_t py = cursor_y_ + static_cast<int32_t>(row);
+                fill_rect(staging, px - 1, py, 1u, 1u, kCursorOutline, cur());
+                fill_rect(staging, px + 1, py, 1u, 1u, kCursorOutline, cur());
+                fill_rect(staging, px, py - 1, 1u, 1u, kCursorOutline, cur());
+                fill_rect(staging, px, py + 1, 1u, 1u, kCursorOutline, cur());
+                fill_rect(staging, px, py, 1u, 1u, kCursorBody, cur());
+            }
+        }
     }
 }
 

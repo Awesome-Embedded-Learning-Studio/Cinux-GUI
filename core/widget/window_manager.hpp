@@ -43,7 +43,10 @@ namespace cinux::gui {
 class WindowManager : public Widget {
 public:
     static constexpr uint32_t kMaxWindows = 16;
-    static constexpr uint32_t kCursorSize = 4;
+    /* Cursor footprint edge length. Must match the 16x16 arrow bitmap
+     * Compositor::render paints; a size mismatch trails on move (only the
+     * top-left corner repaints -> faint blob + smearing). */
+    static constexpr uint32_t kCursorSize = 16;
 
     void set_theme(const Theme* th) { theme_ = th; }
     void set_bg(uint32_t bg) { bg_ = bg; }
@@ -85,6 +88,7 @@ public:
 protected:
     void    paint_to_list(PaintList& list) const override;
     void    collect_dirty(Region& sink) const override;  // P5-f: recurse windows_ (not children_)
+    void    clear_dirty() override;                      // P5-f: recurse windows_ (mirror collect_dirty)
     Widget* hit_test(int32_t x, int32_t y) override;
 
 private:

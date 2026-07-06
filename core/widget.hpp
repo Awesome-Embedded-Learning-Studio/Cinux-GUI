@@ -168,6 +168,7 @@ private:
     Widget*    focus_        = nullptr;  // P6-a: keyboard focus (set on pointer down)
     bool       first_        = true;     // P5-f: paint full screen on frame 1
     Compositor comp_;                    // P7-c: owns cursor state + paint handlers
+    PaintList   paint_list_;                  // F13-B: PaintCmd[4096]~128KB owned flyweight (kernel 8KB stack safe)                    // P7-c: owns cursor state + paint handlers
 };
 
 }  // namespace cinux::gui

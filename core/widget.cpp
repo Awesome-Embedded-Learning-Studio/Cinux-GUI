@@ -106,8 +106,8 @@ void Desktop::render(Surface& staging, const PsfFont& font, Region* dirty) {
     }
     root_->clear_dirty();
     root_->layout();
-    PaintList list;
-    root_->flatten(list);
+    paint_list_.clear();
+    root_->flatten(paint_list_);
     /* P7-c: the Compositor owns the cursor; ask the root (WM) where it is. */
     int32_t    cx         = 0;
     int32_t    cy         = 0;
@@ -117,7 +117,7 @@ void Desktop::render(Surface& staging, const PsfFont& font, Region* dirty) {
     for (uint32_t i = 0u; i < n; ++i) {  // repaint each dirty rect, clipped to it
         const Rect&    r = d->rects()[i];
         const ClipRect clip{r.x0, r.y0, r.x1, r.y1};
-        comp_.render(staging, list, font, &clip);
+        comp_.render(staging, paint_list_, font, &clip);
     }
 }
 

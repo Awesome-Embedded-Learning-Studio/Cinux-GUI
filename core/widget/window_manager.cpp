@@ -83,11 +83,16 @@ void WindowManager::process_pointer(const PointerPayload& p) {
     const int32_t old_cy = cursor_y_;
     cursor_x_            = p.x;
     cursor_y_            = p.y;
-    /* P5-f: only the cursor's old + new footprint, not the whole desktop. */
-    invalidate(Rect{old_cx, old_cy, old_cx + static_cast<int32_t>(kCursorSize),
-                    old_cy + static_cast<int32_t>(kCursorSize)});
-    invalidate(Rect{cursor_x_, cursor_y_, cursor_x_ + static_cast<int32_t>(kCursorSize),
-                    cursor_y_ + static_cast<int32_t>(kCursorSize)});
+    /* P5-f: only the cursor's old + new footprint, not the whole desktop.
+     * Pad by 1px each side so the bitmap's outline (Compositor paints a 1px
+     * border around every lit pixel) is fully covered -- else the edge
+     * leaves a 1px trail on move. */
+    constexpr int32_t kFootprintPad = 1;
+    const int32_t     box           = static_cast<int32_t>(kCursorSize);
+    invalidate(Rect{old_cx - kFootprintPad, old_cy - kFootprintPad,
+                    old_cx + box + kFootprintPad, old_cy + box + kFootprintPad});
+    invalidate(Rect{cursor_x_ - kFootprintPad, cursor_y_ - kFootprintPad,
+                    cursor_x_ + box + kFootprintPad, cursor_y_ + box + kFootprintPad});
 
     if (p.kind == kPointerKindDown) {
         press_target_ = static_cast<Window*>(hit_test(p.x, p.y));
@@ -130,6 +135,20 @@ void WindowManager::collect_dirty(Region& sink) const {
      * (and its content TerminalWidget's) dirty rects never reach the host. */
     for (uint32_t i = 0u; i < count_; ++i) {
         windows_[i]->collect_dirty(sink);
+    }
+}
+
+void WindowManager::clear_dirty() {
+    dirty_self_ = false;
+    dirty_rect_ = Rect{1, 1, 0, 0};  // degenerate (empty)
+    /* Mirror collect_dirty: windows_ are NOT in children_, so the base
+     * Widget::clear_dirty (which only recurses children_) would skip every
+     * Window. That left each Window's dirty_rect_ accumulating via rect_union
+     * across frames -- the bbox only grows, so once a window is dragged
+     * off-screen the bbox picks up a negative origin and never shrinks back,
+     * turning every later frame's window update stale. */
+    for (uint32_t i = 0u; i < count_; ++i) {
+        windows_[i]->clear_dirty();
     }
 }
 
