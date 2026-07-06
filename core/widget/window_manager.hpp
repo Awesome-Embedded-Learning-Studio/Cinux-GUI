@@ -36,6 +36,7 @@
 #include "../paint_list.hpp"     // PaintList
 #include "../theme.hpp"          // Theme
 #include "../widget.hpp"         // Widget
+#include "desktop_icon.hpp"      // DesktopIcon (desktop icons, F13-B)
 #include "window.hpp"            // Window
 
 namespace cinux::gui {
@@ -53,6 +54,11 @@ public:
 
     /** Add a window on top. Registers on_close -> remove_window. */
     void add_window(Window* w);
+
+    /** F13-B: add a desktop icon. Paint order is bg -> icons -> windows, so a
+     * window can occlude an icon. Click (down+up inside) fires on_activate. */
+    static constexpr uint32_t kMaxIcons = 16;
+    void                      add_icon(DesktopIcon* icon);
 
     /** Drop a window from the Z-order (hide). No-op if not present. */
     void remove_window(Window* w);
@@ -100,6 +106,12 @@ private:
     uint32_t     count_                = 0;
     Window*      press_target_         = nullptr;
     const Theme* theme_                = nullptr;
+
+    DesktopIcon* icons_[kMaxIcons] = {};  // F13-B: desktop icons (bg-level)
+    uint32_t     icon_count_        = 0;
+    DesktopIcon* icon_target_       = nullptr;  // press capture for icon
+
+    DesktopIcon* hit_test_icon_(int32_t x, int32_t y) const;  // nullptr if none
     uint32_t     bg_                   = 0x00202020u;  // dark desktop bg
 
     int32_t cursor_x_       = 0;

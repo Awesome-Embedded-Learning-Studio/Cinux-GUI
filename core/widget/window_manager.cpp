@@ -95,20 +95,33 @@ void WindowManager::process_pointer(const PointerPayload& p) {
                     cursor_x_ + box + kFootprintPad, cursor_y_ + box + kFootprintPad});
 
     if (p.kind == kPointerKindDown) {
+        /* Windows sit on top of icons: hit-test windows first. */
         press_target_ = static_cast<Window*>(hit_test(p.x, p.y));
         if (press_target_ != nullptr) {
             raise(press_target_);
             invalidate(press_target_->rect());  // P5-f: Z-order changed -> repaint
             press_target_->on_pointer(p);       // arm close / begin drag
+        } else {
+            /* F13-B: no window hit -- try a desktop icon (press capture). */
+            icon_target_ = hit_test_icon_(p.x, p.y);
+            if (icon_target_ != nullptr) {
+                icon_target_->on_pointer(p);  // arm; activate on up
+            }
         }
     } else if (p.kind == kPointerKindUp) {
         if (press_target_ != nullptr) {
             press_target_->on_pointer(p);  // may fire on_close -> remove_window
         }
         press_target_ = nullptr;
-    } else {  // move: deliver to the capture target (drag), if any
+        if (icon_target_ != nullptr) {
+            icon_target_->on_pointer(p);  // may fire on_activate
+            icon_target_ = nullptr;
+        }
+    } else {  // move: deliver to whichever capture target is active
         if (press_target_ != nullptr) {
             press_target_->on_pointer(p);
+        } else if (icon_target_ != nullptr) {
+            icon_target_->on_pointer(p);
         }
     }
 }
@@ -117,7 +130,12 @@ void WindowManager::paint_to_list(PaintList& list) const {
     /* 1. Desktop background. */
     list.fill_rect(rect_.x0, rect_.y0, rect_.width(), rect_.height(), bg_);
 
-    /* 2. Windows bottom -> top (each flattens itself + its content). */
+    /* 2. Desktop icons (bg-level; windows can occlude them). F13-B. */
+    for (uint32_t i = 0u; i < icon_count_; ++i) {
+        icons_[i]->flatten(list);
+    }
+
+    /* 3. Windows bottom -> top (each flattens itself + its content). */
     for (uint32_t i = 0; i < count_; ++i) {
         windows_[i]->flatten(list);
     }
@@ -130,6 +148,10 @@ void WindowManager::collect_dirty(Region& sink) const {
     if (dirty_self_) {
         sink.add(dirty_rect_);
     }
+    /* F13-B: icons live in their own array (same as windows_), NOT children_. */
+    for (uint32_t i = 0u; i < icon_count_; ++i) {
+        icons_[i]->collect_dirty(sink);
+    }
     /* P5-f: windows_ live in their own array (P4-b), NOT in children_ -- recurse
      * them explicitly, same shape as paint_to_list. Without this a Window's
      * (and its content TerminalWidget's) dirty rects never reach the host. */
@@ -141,6 +163,10 @@ void WindowManager::collect_dirty(Region& sink) const {
 void WindowManager::clear_dirty() {
     dirty_self_ = false;
     dirty_rect_ = Rect{1, 1, 0, 0};  // degenerate (empty)
+    /* F13-B: icons live in their own array (same rationale as windows_). */
+    for (uint32_t i = 0u; i < icon_count_; ++i) {
+        icons_[i]->clear_dirty();
+    }
     /* Mirror collect_dirty: windows_ are NOT in children_, so the base
      * Widget::clear_dirty (which only recurses children_) would skip every
      * Window. That left each Window's dirty_rect_ accumulating via rect_union
@@ -150,6 +176,25 @@ void WindowManager::clear_dirty() {
     for (uint32_t i = 0u; i < count_; ++i) {
         windows_[i]->clear_dirty();
     }
+}
+
+void WindowManager::add_icon(DesktopIcon* icon) {
+    if (icon == nullptr || icon_count_ >= kMaxIcons) {
+        return;
+    }
+    icons_[icon_count_++] = icon;
+    invalidate(icon->rect());  // icon appeared -> repaint its footprint
+}
+
+DesktopIcon* WindowManager::hit_test_icon_(int32_t x, int32_t y) const {
+    /* topmost (last-registered) first so later icons win on overlap */
+    for (uint32_t i = icon_count_; i > 0u; --i) {
+        DesktopIcon* ic = icons_[i - 1u];
+        if (ic->visible() && ic->rect().contains(x, y)) {
+            return ic;
+        }
+    }
+    return nullptr;
 }
 
 }  // namespace cinux::gui

@@ -49,6 +49,7 @@ add_library(cinux-gui STATIC
     core/widget/slider.cpp
     core/widget/window.cpp
     core/widget/window_manager.cpp
+    core/widget/desktop_icon.cpp
     core/widget/terminal.cpp
     core/widget/textbox.cpp
     core/widget/checkbox.cpp
