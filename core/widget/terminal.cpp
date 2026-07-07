@@ -9,23 +9,16 @@
 
 #include <stdint.h>
 
+#include "../colors.hpp"
+
 namespace cinux::gui {
 
 namespace {
-/* Standard 16-colour ANSI palette (XRGB8888). Index 0-7 normal, 8-15 bright.
- * Used by paint_to_list to turn a cell's SGR fg index into a pixel colour. */
-const uint32_t kAnsiPalette[16] = {
-    0x00000000u, 0x00800000u, 0x00008000u, 0x00808000u,  // black red green yellow
-    0x000000FFu, 0x00800080u, 0x00008080u, 0x00C0C0C0u,  // blue magenta cyan white
-    0x00808080u, 0x00FF0000u, 0x0000FF00u, 0x00FFFF00u,  // bright black/red/green/yellow
-    0x000000FFu, 0x00FF00FFu, 0x0000FFFFu, 0x00FFFFFFu,  // bright blue/magenta/cyan/white
-};
-
-/* P6-c: 256-colour palette lookup (XRGB8888). 0-15 = the 16 above; 16-231 a
- * 6x6x6 colour cube (each channel 0 or 55+40*v); 232-255 a 24-step grayscale. */
+/* P6-c: 256-colour palette lookup (XRGB8888). 0-15 = the 16 in colors.hpp;
+ * 16-231 a 6x6x6 colour cube (each channel 0 or 55+40*v); 232-255 grayscale. */
 uint32_t palette_color(uint8_t idx) {
     if (idx < 16u) {
-        return kAnsiPalette[idx];
+        return colors::kAnsiPalette[idx];
     }
     if (idx < 232u) {
         const uint32_t c    = idx - 16u;
