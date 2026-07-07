@@ -185,6 +185,20 @@ void Window::paint_to_list(PaintList& list) const {
     list.fill_rect(hx, hy, kResizeHandle, kResizeHandle, outline);
 }
 
+void Window::collect_dirty(Region& sink) const {
+    Widget::collect_dirty(sink);  // self dirty + children_ (content is one)
+    if (content_ != nullptr) {
+        content_->collect_dirty(sink);  // explicit: content dirty must reach WM
+    }
+}
+
+void Window::clear_dirty() {
+    Widget::clear_dirty();
+    if (content_ != nullptr) {
+        content_->clear_dirty();
+    }
+}
+
 void Window::set_maximized(bool m, Rect full) {  // P6-b
     if (m && !maximized_) {
         prev_rect_ = rect_;

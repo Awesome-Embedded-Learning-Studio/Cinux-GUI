@@ -37,7 +37,7 @@ Theme material_dark() {
         0x00121212u,  // surface                (dark grey)
         0x00FFFFFFu,  // on_surface             (white)
         0x0049454Fu,  // surface_variant        (#49454F, muted)
-        0x00000000u,  // background             (black)
+        0x002A1C12u,  // background             (warm dark coffee -- was pure black)
         0x00CF6679u,  // error
         0x00424242u,  // outline
         kRadiusMedium, kRadiusLarge,

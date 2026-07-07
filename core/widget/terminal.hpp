@@ -87,6 +87,7 @@ private:
     uint32_t     rows_                           = kDefaultRows;
     uint32_t     cur_col_                        = 0;
     uint32_t     cur_row_                        = 0;
+    uint32_t     prev_cursor_row_                = 0;  // last-painted cursor row (erase trail)
     uint8_t      cur_fg_                         = 7u;  // current SGR fg (white)
     uint8_t      cur_bg_                         = 0u;  // P6-c: current SGR bg (black)
     const Theme* theme_                          = nullptr;

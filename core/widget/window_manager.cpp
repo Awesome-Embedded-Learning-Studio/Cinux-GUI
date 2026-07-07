@@ -41,6 +41,12 @@ void WindowManager::remove_window(Window* w) {
     if (idx < 0) {
         return;
     }
+    // Capture the footprint BEFORE unlinking: once the window leaves the list
+    // its rect is stale, and core must repaint that area (background / windows
+    // below) or the closed window's pixels stay on screen.  This was a core
+    // bug -- hosts worked around it with a full-screen dirty flush each frame,
+    // but the proper fix is invalidating here, mirroring add_window().
+    const Rect stale = w->rect();
     for (uint32_t i = static_cast<uint32_t>(idx); i + 1 < count_; ++i) {
         windows_[i] = windows_[i + 1];
     }
@@ -48,6 +54,10 @@ void WindowManager::remove_window(Window* w) {
     --count_;
     if (press_target_ == w) {
         press_target_ = nullptr;
+    }
+    invalidate(stale);
+    if (on_remove_cb_ != nullptr) {
+        on_remove_cb_(on_remove_ctx_, w);  // host: tear down per-window state
     }
 }
 
@@ -127,8 +137,10 @@ void WindowManager::process_pointer(const PointerPayload& p) {
 }
 
 void WindowManager::paint_to_list(PaintList& list) const {
-    /* 1. Desktop background. */
-    list.fill_rect(rect_.x0, rect_.y0, rect_.width(), rect_.height(), bg_);
+    /* 1. Desktop background -- single source of truth: theme.background
+     *    (no separate bg_ colour; the WM reads it straight from the theme). */
+    const uint32_t bg = (theme_ != nullptr) ? theme_->background : 0x00000000u;
+    list.fill_rect(rect_.x0, rect_.y0, rect_.width(), rect_.height(), bg);
 
     /* 2. Desktop icons (bg-level; windows can occlude them). F13-B. */
     for (uint32_t i = 0u; i < icon_count_; ++i) {

@@ -50,7 +50,13 @@ public:
     static constexpr uint32_t kCursorSize = 16;
 
     void set_theme(const Theme* th) { theme_ = th; }
-    void set_bg(uint32_t bg) { bg_ = bg; }
+
+    /** Register a callback fired after remove_window() unlinks a window, so the
+     * host can tear down per-window state (e.g. close the shell PTY so the Shell
+     * icon can spawn a fresh shell on the next click -- otherwise shell_activate
+     * sees sh_master_fd >= 0 and silently returns, the reopen bug). */
+    using RemoveCallback = void (*)(void* ctx, Window* w);
+    void set_on_remove(RemoveCallback cb, void* ctx) { on_remove_cb_ = cb; on_remove_ctx_ = ctx; }
 
     /** Add a window on top. Registers on_close -> remove_window. */
     void add_window(Window* w);
@@ -112,7 +118,9 @@ private:
     DesktopIcon* icon_target_       = nullptr;  // press capture for icon
 
     DesktopIcon* hit_test_icon_(int32_t x, int32_t y) const;  // nullptr if none
-    uint32_t     bg_                   = 0x00202020u;  // dark desktop bg
+
+    RemoveCallback on_remove_cb_  = nullptr;  // host callback after remove_window
+    void*          on_remove_ctx_ = nullptr;
 
     int32_t cursor_x_       = 0;
     int32_t cursor_y_       = 0;

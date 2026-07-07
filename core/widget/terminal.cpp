@@ -16,7 +16,7 @@ namespace {
  * Used by paint_to_list to turn a cell's SGR fg index into a pixel colour. */
 const uint32_t kAnsiPalette[16] = {
     0x00000000u, 0x00800000u, 0x00008000u, 0x00808000u,  // black red green yellow
-    0x00000080u, 0x00800080u, 0x00008080u, 0x00C0C0C0u,  // blue magenta cyan white
+    0x000000FFu, 0x00800080u, 0x00008080u, 0x00C0C0C0u,  // blue magenta cyan white
     0x00808080u, 0x00FF0000u, 0x0000FF00u, 0x00FFFF00u,  // bright black/red/green/yellow
     0x000000FFu, 0x00FF00FFu, 0x0000FFFFu, 0x00FFFFFFu,  // bright blue/magenta/cyan/white
 };
@@ -197,7 +197,7 @@ void TerminalWidget::dispatch_csi_(char final_byte) {
             cur_col_ = (c - 1u < cols_) ? c - 1u : cols_ - 1u;
             break;
         }
-        case 'J': {  // [2J = clear whole grid (other modes ignored)
+        case 'J': {  // [J erase display: 0/empty=cursor-to-end, 1=start-to-cursor, 2=whole
             uint32_t n   = 0;
             bool     has = false;
             for (uint8_t i = 0; i < csi_len_; ++i) {
@@ -206,12 +206,29 @@ void TerminalWidget::dispatch_csi_(char final_byte) {
                     has = true;
                 }
             }
-            if ((has ? n : 0u) == 2u) {
+            const uint32_t mode = has ? n : 0u;
+            auto           clear_row_seg = [&](uint32_t r, uint32_t c0, uint32_t c1) {
+                for (uint32_t c = c0; c < c1 && c < cols_; ++c) {
+                    cells_[r * kMaxCols + c] = 0;
+                }
+            };
+            if (mode == 0u) {
+                // cursor to end of screen: rest of current row (cur_col..cols) +
+                // all rows below. MUST start at cur_col_ so a line-edit
+                // "\b ESC[J" backspace leaves the prompt (left of cursor) intact.
+                clear_row_seg(cur_row_, cur_col_, cols_);
+                for (uint32_t r = cur_row_ + 1u; r < rows_; ++r) clear_row_seg(r, 0u, cols_);
+            } else if (mode == 1u) {
+                // start of screen to cursor
+                for (uint32_t r = 0u; r < cur_row_; ++r) clear_row_seg(r, 0u, cols_);
+                clear_row_seg(cur_row_, 0u, cur_col_ + 1u);
+            } else {  // mode 2: whole grid
                 for (uint32_t i = 0; i < kMaxCols * kMaxRows; ++i) {
                     cells_[i] = 0;
                 }
-                invalidate();
             }
+            dirty_all_ = true;  // erase-display must repaint the whole grid
+            invalidate();
             break;
         }
         default:
@@ -262,6 +279,7 @@ void TerminalWidget::put_char_(char ch) {
             cur_col_ = 0;
             return;
         case '\b':
+        case 0x7f:  // DEL: busybox line-edit sends 0x7f for backspace, not 0x08
             if (cur_col_ > 0) {
                 --cur_col_;
                 /* Erase the cell (not just move the cursor): a backspace must
@@ -337,6 +355,18 @@ void TerminalWidget::collect_dirty(Region& sink) const {
             sink.add(Rect{x0, ry0, x1, ry0 + static_cast<int32_t>(kGlyphH)});
         }
     }
+    /* Cursor footprint: always repaint the current + last-painted cursor row
+     * so a moved cursor's old block is erased. The row the cursor left is not
+     * otherwise dirty (writing a char marks only the new row), so without this
+     * the old cursor block stays on screen as a trail. */
+    const uint32_t cursor_rows[2] = {cur_row_, prev_cursor_row_};
+    for (uint32_t i = 0u; i < 2u; ++i) {
+        const uint32_t r = cursor_rows[i];
+        if (r < rows_) {
+            const int32_t ry0 = y0 + static_cast<int32_t>(r * kGlyphH);
+            sink.add(Rect{x0, ry0, x1, ry0 + static_cast<int32_t>(kGlyphH)});
+        }
+    }
 }
 
 void TerminalWidget::clear_dirty() {
@@ -344,6 +374,7 @@ void TerminalWidget::clear_dirty() {
     for (uint32_t r = 0u; r < kMaxRows; ++r) {
         dirty_rows_[r] = false;
     }
+    prev_cursor_row_ = cur_row_;  // remember this frame's cursor row for next collect
     Widget::clear_dirty();  // dirty_self_ + children
 }
 

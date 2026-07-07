@@ -78,6 +78,10 @@ public:
     void    layout() override;
     Widget* hit_test(int32_t x, int32_t y) override;
     void    on_pointer(const PointerPayload& p) override;
+    /* collect_dirty/clear_dirty stay public (Widget's are public; the WM calls
+     * them via Window*). Overriding cannot narrow from public. */
+    void    collect_dirty(Region& sink) const override;  // recurse content_ explicitly
+    void    clear_dirty() override;
 
 protected:
     void paint_to_list(PaintList& list) const override;
