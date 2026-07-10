@@ -152,6 +152,18 @@ void TerminalWidget::dispatch_csi_(char final_byte) {
         case 'm':
             apply_sgr_();
             break;
+        case 'A':  // CUU cursor up (param ignored; default 1 step)
+            cur_row_ = (cur_row_ > 0u) ? cur_row_ - 1u : 0u;
+            break;
+        case 'B':  // CUD cursor down
+            cur_row_ = (cur_row_ + 1u < rows_) ? cur_row_ + 1u : rows_ - 1u;
+            break;
+        case 'C':  // CUF cursor forward (right)
+            cur_col_ = (cur_col_ + 1u < cols_) ? cur_col_ + 1u : cols_ - 1u;
+            break;
+        case 'D':  // CUB cursor back (left)
+            cur_col_ = (cur_col_ > 0u) ? cur_col_ - 1u : 0u;
+            break;
         case 'H':
         case 'f': {  // cursor position [row;colH (1-based; 0/empty treated as 1)
             uint32_t r    = 1;
@@ -271,13 +283,17 @@ void TerminalWidget::put_char_(char ch) {
         case '\r':
             cur_col_ = 0;
             return;
-        case '\b':
-        case 0x7f:  // DEL: busybox line-edit sends 0x7f for backspace, not 0x08
+        case '\b':  // 0x08 BS: move cursor back one column, do NOT erase.
+            // ANSI BS only moves the cursor; ash line-edit shifts the cursor
+            // with \b, so erasing here wiped every glyph it passed (left-arrow
+            // "ate" characters).  Deletion is 0x7f (DEL) below.
             if (cur_col_ > 0) {
                 --cur_col_;
-                /* Erase the cell (not just move the cursor): a backspace must
-                 * remove the glyph even if the shell's erase echo is a lone \b
-                 * (ECHOE off) rather than the usual \b<space>\b. */
+            }
+            return;
+        case 0x7f:  // DEL: busybox line-edit sends 0x7f for backspace (delete)
+            if (cur_col_ > 0) {
+                --cur_col_;
                 const uint32_t idx    = cur_row_ * kMaxCols + cur_col_;
                 cells_[idx]           = 0;
                 fg_colors_[idx]       = 0;
